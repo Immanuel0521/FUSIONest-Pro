@@ -1,0 +1,16 @@
+project_id = "nsnaepcguxlyqrxbzctq"
+
+[functions.backup-database]
+verify_jwt = true
+
+[functions.restore-database]
+verify_jwt = true
+
+[functions.ai-activity-summary]
+verify_jwt = true
+
+[functions.secure-data]
+verify_jwt = false
+
+[functions.mcp]
+verify_jwt = false

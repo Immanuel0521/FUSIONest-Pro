@@ -1,0 +1,10 @@
+# FUSIONest Pro
+
+> Workforce, attendance and project management platform for construction teams.
+
+FUSIONest Pro is an offline-ready web app used by construction supervisors and management to manage workers, track real-time biometric attendance, run projects, fill checklists, and generate reports.
+
+## Pages
+
+- [Home](/): Sign in to the FUSIONest Pro workforce and project management platform.
+- [Face Attendance](/attendance-scan): Public biometric face-attendance kiosk for workers to check in and out on-site.

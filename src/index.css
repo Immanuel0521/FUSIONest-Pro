@@ -1,0 +1,230 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+
+@layer base {
+  :root {
+    --background: 200 20% 96%;
+    --foreground: 210 25% 12%;
+
+    --card: 200 20% 98%;
+    --card-foreground: 210 25% 12%;
+
+    --popover: 200 20% 98%;
+    --popover-foreground: 210 25% 12%;
+
+    --primary: 175 55% 35%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 200 15% 55%;
+    --secondary-foreground: 0 0% 100%;
+
+    --muted: 200 12% 90%;
+    --muted-foreground: 210 10% 45%;
+
+    --accent: 175 55% 42%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 200 15% 88%;
+    --input: 200 15% 88%;
+    --ring: 175 55% 42%;
+
+    --radius: 1rem;
+
+    /* Glassmorphism */
+    --glass-bg: 200 20% 98% / 0.55;
+    --glass-border: 200 20% 95% / 0.6;
+    --glass-blur: 24px;
+
+    /* Shadows */
+    --shadow-sm: 0 1px 3px 0 hsl(210 25% 12% / 0.04);
+    --shadow-md: 0 4px 16px -2px hsl(210 25% 12% / 0.06);
+    --shadow-lg: 0 20px 40px -8px hsl(210 25% 12% / 0.1);
+    --shadow-glass: 0 8px 32px 0 hsl(210 25% 12% / 0.08);
+    --shadow-glow: 0 0 40px hsl(175 55% 42% / 0.15);
+
+    /* Animations */
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-spring: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+
+    --sidebar-background: 200 20% 98%;
+    --sidebar-foreground: 210 25% 12%;
+    --sidebar-primary: 175 55% 35%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 200 12% 90%;
+    --sidebar-accent-foreground: 210 25% 12%;
+    --sidebar-border: 200 15% 88%;
+    --sidebar-ring: 175 55% 42%;
+  }
+
+  .dark {
+    --background: 210 30% 8%;
+    --foreground: 200 10% 92%;
+
+    --card: 210 25% 12%;
+    --card-foreground: 200 10% 92%;
+
+    --popover: 210 25% 12%;
+    --popover-foreground: 200 10% 92%;
+
+    --primary: 175 55% 42%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 200 15% 25%;
+    --secondary-foreground: 200 10% 92%;
+
+    --muted: 210 20% 16%;
+    --muted-foreground: 200 10% 55%;
+
+    --accent: 175 55% 48%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 210 20% 18%;
+    --input: 210 20% 18%;
+    --ring: 175 55% 48%;
+
+    /* Glassmorphism Dark */
+    --glass-bg: 210 25% 12% / 0.6;
+    --glass-border: 210 20% 20% / 0.5;
+    --glass-blur: 24px;
+
+    /* Shadows Dark */
+    --shadow-sm: 0 1px 3px 0 hsl(0 0% 0% / 0.3);
+    --shadow-md: 0 4px 16px -2px hsl(0 0% 0% / 0.35);
+    --shadow-lg: 0 20px 40px -8px hsl(0 0% 0% / 0.45);
+    --shadow-glass: 0 8px 32px 0 hsl(0 0% 0% / 0.35);
+    --shadow-glow: 0 0 40px hsl(175 55% 48% / 0.12);
+
+    --sidebar-background: 210 25% 12%;
+    --sidebar-foreground: 200 10% 92%;
+    --sidebar-primary: 175 55% 42%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 210 20% 16%;
+    --sidebar-accent-foreground: 200 10% 92%;
+    --sidebar-border: 210 20% 18%;
+    --sidebar-ring: 175 55% 48%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Space Grotesk', 'Inter', sans-serif;
+  }
+}
+
+@layer utilities {
+  /* Glass morphism effect */
+  .glass {
+    background: hsl(var(--glass-bg));
+    backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+    border: 1px solid hsl(var(--glass-border));
+  }
+
+  .glass-card {
+    background: hsl(var(--glass-bg));
+    backdrop-filter: blur(30px);
+    -webkit-backdrop-filter: blur(30px);
+    border: 1px solid hsl(var(--glass-border));
+    box-shadow: var(--shadow-glass);
+  }
+
+  .glass-heavy {
+    background: hsl(var(--glass-bg));
+    backdrop-filter: blur(40px) saturate(1.4);
+    -webkit-backdrop-filter: blur(40px) saturate(1.4);
+    border: 1px solid hsl(var(--glass-border));
+    box-shadow: var(--shadow-glass), var(--shadow-glow);
+  }
+
+  /* Animations */
+  .animate-slide-up {
+    animation: slideUp 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .animate-fade-in {
+    animation: fadeIn 0.5s ease-out;
+  }
+
+  .animate-scale-in {
+    animation: scaleIn 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .animate-float {
+    animation: float 6s ease-in-out infinite;
+  }
+
+  @keyframes slideUp {
+    from { opacity: 0; transform: translateY(30px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  @keyframes scaleIn {
+    from { opacity: 0; transform: scale(0.92); }
+    to { opacity: 1; transform: scale(1); }
+  }
+
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-8px); }
+  }
+
+  @keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+
+  .shimmer {
+    background: linear-gradient(
+      90deg,
+      transparent 25%,
+      hsl(var(--primary) / 0.08) 50%,
+      transparent 75%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 3s ease-in-out infinite;
+  }
+
+  /* Hover effects */
+  .hover-lift {
+    transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.3s ease;
+  }
+
+  .hover-lift:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-lg);
+  }
+
+  /* Parallax */
+  .parallax {
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  /* Pill button style */
+  .pill-btn {
+    @apply rounded-full px-6 py-3 font-semibold text-sm transition-all;
+  }
+}

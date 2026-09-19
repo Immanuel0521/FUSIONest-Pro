@@ -1,0 +1,191 @@
+import { Toaster } from "@/components/ui/toaster";
+import { Toaster as Sonner } from "@/components/ui/sonner";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
+import { AnimatePresence } from "framer-motion";
+import { ThemeProvider } from "next-themes";
+import { OfflineIndicator } from "@/components/OfflineIndicator";
+import { PageTransition } from "@/components/PageTransition";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
+import Index from "./pages/Index";
+import Dashboard from "./pages/Dashboard";
+import Workforce from "./pages/Workforce";
+import Projects from "./pages/Projects";
+import ProjectDetail from "./pages/ProjectDetail";
+import ReportsHub from "./pages/ReportsHub";
+import WorkerHistory from "./pages/WorkerHistory";
+import Admin from "./pages/Admin";
+import Profile from "./pages/Profile";
+import SupervisorAttendance from "./pages/SupervisorAttendance";
+import Notifications from "./pages/Notifications";
+import NotFound from "./pages/NotFound";
+ import WorkerAttendance from "./pages/WorkerAttendance";
+ import PublicBiometricAttendance from "./pages/PublicBiometricAttendance";
+ import AttendanceHistory from "./pages/AttendanceHistory";
+ import WorkAllocationHistory from "./pages/WorkAllocationHistory";
+import Methodologies from "./pages/Methodologies";
+import Checklists from "./pages/Checklists";
+import ChecklistBuilder from "./pages/ChecklistBuilder";
+import MyChecklists from "./pages/MyChecklists";
+import FillChecklist from "./pages/FillChecklist";
+import OAuthConsent from "./pages/OAuthConsent";
+import DprHub from "./pages/DprHub";
+import DprWizard from "./pages/DprWizard";
+import DprReview from "./pages/DprReview";
+import DprOverview from "./pages/DprOverview";
+
+const queryClient = new QueryClient();
+
+const AnimatedRoutes = () => {
+  const location = useLocation();
+  
+  return (
+    <AnimatePresence mode="wait">
+      <Routes location={location} key={location.pathname}>
+        {/* Public routes */}
+        <Route path="/" element={<PageTransition><Index /></PageTransition>} />
+        <Route path="/attendance-scan" element={<PageTransition><PublicBiometricAttendance /></PageTransition>} />
+        <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
+        
+        {/* Supervisor routes (accessible by admin and supervisor) */}
+        <Route path="/dashboard" element={
+          <ProtectedRoute allowedRoles={["admin", "management", "supervisor"]}>
+            <PageTransition><Dashboard /></PageTransition>
+          </ProtectedRoute>
+        } />
+        <Route path="/workforce" element={
+          <ProtectedRoute allowedRoles={["admin", "management", "supervisor"]}>
+            <PageTransition><Workforce /></PageTransition>
+          </ProtectedRoute>
+        } />
+        
+        {/* Admin only routes */}
+        <Route path="/projects" element={
+          <ProtectedRoute allowedRoles={["admin", "management", "supervisor"]}>
+            <PageTransition><Projects /></PageTransition>
+          </ProtectedRoute>
+        } />
+        <Route path="/projects/:id" element={
+          <ProtectedRoute allowedRoles={["admin", "management", "supervisor"]}>
+            <PageTransition><ProjectDetail /></PageTransition>
+          </ProtectedRoute>
+        } />
+        <Route path="/projects/:projectId/checklists/:pcId/fill" element={
+          <ProtectedRoute allowedRoles={["admin", "supervisor"]}>
+            <PageTransition><FillChecklist /></PageTransition>
+          </ProtectedRoute>
+        } />
+        <Route path="/methodologies" element={
+          <ProtectedRoute allowedRoles={["admin", "management", "supervisor"]}>
+            <PageTransition><Methodologies /></PageTransition>
+          </ProtectedRoute>
+        } />
+        <Route path="/checklists" element={
+          <ProtectedRoute allowedRoles={["admin", "management", "supervisor"]}>
+            <PageTransition><Checklists /></PageTransition>
+          </ProtectedRoute>
+        } />
+        <Route path="/checklists/new" element={
+          <ProtectedRoute allowedRoles={["admin"]}>
+            <PageTransition><ChecklistBuilder /></PageTransition>
+          </ProtectedRoute>
+        } />
+        <Route path="/checklists/:id/edit" element={
+          <ProtectedRoute allowedRoles={["admin"]}>
+            <PageTransition><ChecklistBuilder /></PageTransition>
+          </ProtectedRoute>
+        } />
+        <Route path="/my-checklists" element={
+          <ProtectedRoute allowedRoles={["admin", "management", "supervisor"]}>
+            <PageTransition><MyChecklists /></PageTransition>
+          </ProtectedRoute>
+        } />
+        <Route path="/reports" element={
+          <ProtectedRoute allowedRoles={["admin", "management"]}>
+            <PageTransition><ReportsHub /></PageTransition>
+          </ProtectedRoute>
+        } />
+        <Route path="/reports/worker/:workerId" element={
+          <ProtectedRoute allowedRoles={["admin", "management"]}>
+            <PageTransition><WorkerHistory /></PageTransition>
+          </ProtectedRoute>
+        } />
+        <Route path="/admin" element={
+          <ProtectedRoute allowedRoles={["admin"]}>
+            <PageTransition><Admin /></PageTransition>
+          </ProtectedRoute>
+        } />
+        <Route path="/profile" element={
+          <ProtectedRoute allowedRoles={["admin", "management", "supervisor"]}>
+            <PageTransition><Profile /></PageTransition>
+          </ProtectedRoute>
+        } />
+        <Route path="/my-attendance" element={
+          <ProtectedRoute allowedRoles={["admin", "supervisor"]}>
+            <PageTransition><SupervisorAttendance /></PageTransition>
+          </ProtectedRoute>
+        } />
+        <Route path="/notifications" element={
+          <ProtectedRoute allowedRoles={["admin", "management", "supervisor"]}>
+            <PageTransition><Notifications /></PageTransition>
+          </ProtectedRoute>
+        } />
+         <Route path="/attendance-history" element={
+           <ProtectedRoute allowedRoles={["admin", "management"]}>
+             <PageTransition><AttendanceHistory /></PageTransition>
+           </ProtectedRoute>
+         } />
+         <Route path="/work-allocation-history" element={
+           <ProtectedRoute allowedRoles={["admin"]}>
+             <PageTransition><WorkAllocationHistory /></PageTransition>
+           </ProtectedRoute>
+         } />
+         <Route path="/dpr" element={
+           <ProtectedRoute allowedRoles={["admin", "management", "supervisor"]}>
+             <PageTransition><DprHub /></PageTransition>
+           </ProtectedRoute>
+         } />
+         <Route path="/dpr/overview" element={
+           <ProtectedRoute allowedRoles={["admin", "management", "project_manager" as any]}>
+             <PageTransition><DprOverview /></PageTransition>
+           </ProtectedRoute>
+         } />
+         <Route path="/dpr/:dprId/review" element={
+           <ProtectedRoute allowedRoles={["admin", "management", "project_manager" as any, "supervisor"]}>
+             <PageTransition><DprReview /></PageTransition>
+           </ProtectedRoute>
+         } />
+         <Route path="/projects/:id/dpr/:dprId" element={
+           <ProtectedRoute allowedRoles={["admin", "management", "supervisor", "project_manager" as any]}>
+             <PageTransition><DprWizard /></PageTransition>
+           </ProtectedRoute>
+         } />
+         <Route path="/worker-attendance" element={
+          <ProtectedRoute allowedRoles={["admin", "supervisor"]}>
+            <PageTransition><WorkerAttendance /></PageTransition>
+          </ProtectedRoute>
+        } />
+        
+        <Route path="*" element={<PageTransition><NotFound /></PageTransition>} />
+      </Routes>
+    </AnimatePresence>
+  );
+};
+
+const App = () => (
+  <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <OfflineIndicator />
+        <BrowserRouter>
+          <AnimatedRoutes />
+        </BrowserRouter>
+      </TooltipProvider>
+    </QueryClientProvider>
+  </ThemeProvider>
+);
+
+export default App;
