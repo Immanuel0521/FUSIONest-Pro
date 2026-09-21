@@ -5,51 +5,52 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabase";
-import { Mail, Lock, LogIn, UserPlus, ArrowRight } from "lucide-react";
-import { authFormSchema } from "@/lib/validationSchemas";
-import { motion } from "framer-motion";
+import { Mail, Lock, ArrowRight, Loader2, User } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import heroBg from "@/assets/hero-bg.jpg";
 import logo from "@/assets/fusionest-logo.png";
 
 export const AuthForm = () => {
   const [isLogin, setIsLogin] = useState(true);
   const [params] = useSearchParams();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
   const { toast } = useToast();
+
+  const [email, setEmail]       = useState("");
+  const [password, setPassword] = useState("");
+  const [fullName, setFullName] = useState("");
+  const [loading, setLoading]   = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-
     try {
-      const validationResult = authFormSchema.safeParse({ email, password });
-      if (!validationResult.success) {
-        const errors = validationResult.error.errors.map(err => err.message).join(", ");
-        toast({ title: "Validation Error", description: errors, variant: "destructive" });
-        setLoading(false);
-        return;
-      }
-
       if (isLogin) {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
-        toast({ title: "Welcome back!", description: "Successfully logged in." });
+        toast({ title: "Welcome back!", description: "Successfully signed in." });
       } else {
+        if (!fullName.trim()) {
+          toast({ title: "Name required", description: "Please enter your full name.", variant: "destructive" });
+          setLoading(false);
+          return;
+        }
         const nextParam = params.get("next");
-        const safeNext = nextParam && nextParam.startsWith("/") && !nextParam.startsWith("//") ? nextParam : "";
-        const redirect = `${window.location.origin}/${safeNext ? `?next=${encodeURIComponent(safeNext)}` : ""}`;
+        const safeNext  = nextParam?.startsWith("/") && !nextParam.startsWith("//") ? nextParam : "";
+        const redirect  = `${window.location.origin}/${safeNext ? `?next=${encodeURIComponent(safeNext)}` : ""}`;
         const { error } = await supabase.auth.signUp({
-          email, password,
-          options: { emailRedirectTo: redirect },
+          email,
+          password,
+          options: {
+            emailRedirectTo: redirect,
+            data: { full_name: fullName.trim() },
+          },
         });
         if (error) throw error;
-        toast({ title: "Account created!", description: "You can now log in." });
+        toast({ title: "Account created!", description: "Check your email to confirm, then sign in." });
         setIsLogin(true);
       }
-    } catch (error: any) {
-      toast({ variant: "destructive", title: "Error", description: error.message });
+    } catch (err: any) {
+      toast({ variant: "destructive", title: "Error", description: err.message });
     } finally {
       setLoading(false);
     }
@@ -57,136 +58,163 @@ export const AuthForm = () => {
 
   return (
     <div className="min-h-screen relative flex flex-col overflow-hidden">
-      {/* Full-bleed background image */}
-      <img
-        src={heroBg}
-        alt=""
-        className="absolute inset-0 w-full h-full object-cover"
-      />
-      {/* Overlay gradients */}
+      {/* Background */}
+      <img src={heroBg} alt="" className="absolute inset-0 w-full h-full object-cover" />
       <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-black/50" />
       <div className="absolute inset-0 bg-gradient-to-br from-primary/20 via-transparent to-accent/10" />
 
-      {/* Content */}
       <div className="relative z-10 flex flex-col min-h-screen justify-between p-6 sm:p-8">
-        {/* Top section - Logo */}
+        {/* Logo */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
-          className="flex items-center justify-between"
+          className="flex items-center gap-3"
         >
-          <div className="flex items-center gap-3">
-            <img src={logo} alt="FUSIONest" className="w-8 h-8 rounded-lg object-contain" />
-            <span className="text-white/90 font-semibold tracking-wide text-sm">FUSIONest</span>
-          </div>
+          <img src={logo} alt="FUSIONest" className="w-8 h-8 rounded-lg object-contain" />
+          <span className="text-white/90 font-semibold tracking-wide text-sm">FUSIONest Pro</span>
         </motion.div>
 
-        {/* Middle - Welcome text */}
+        {/* Card */}
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.7, delay: 0.2 }}
-          className="flex-1 flex flex-col justify-center max-w-lg mx-auto w-full"
+          className="flex-1 flex flex-col justify-center max-w-md mx-auto w-full"
         >
           <div className="mb-8">
-            <h1 className="sr-only">FUSIONest Pro — Workforce and Project Management</h1>
-            <p aria-hidden="true" className="text-5xl sm:text-6xl font-bold text-white tracking-tight leading-[1.1] whitespace-pre-line" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+            <p
+              className="text-5xl sm:text-6xl font-bold text-white tracking-tight leading-[1.1] whitespace-pre-line"
+              style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+            >
               {isLogin ? "Welcome\nBack" : "Get\nStarted"}
             </p>
-            <p className="text-white/60 mt-4 text-base sm:text-lg leading-relaxed">
+            <p className="text-white/60 mt-4 text-base leading-relaxed">
               {isLogin
                 ? "Sign in to manage your workforce, projects and attendance seamlessly."
-                : "Create your supervisor account to get started with FUSIONest Pro."}
+                : "Create your account and set up your company workspace."}
             </p>
           </div>
 
-          {/* Glass form card */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.4 }}
             className="glass-heavy rounded-3xl p-6 sm:p-8 space-y-5"
           >
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="email" className="text-white/80 text-xs uppercase tracking-wider font-medium flex items-center gap-2">
-                  <Mail className="w-3.5 h-3.5" />
-                  Email
-                </Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="supervisor@example.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  className="bg-white/10 border-white/15 text-white placeholder:text-white/30 rounded-xl h-12 focus:border-primary/60 focus:ring-primary/30"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="password" className="text-white/80 text-xs uppercase tracking-wider font-medium flex items-center gap-2">
-                  <Lock className="w-3.5 h-3.5" />
-                  Password
-                </Label>
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  minLength={6}
-                  className="bg-white/10 border-white/15 text-white placeholder:text-white/30 rounded-xl h-12 focus:border-primary/60 focus:ring-primary/30"
-                />
-              </div>
-
-              <Button
-                type="submit"
-                className="w-full h-12 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-base shadow-lg shadow-primary/25 transition-all"
-                disabled={loading}
+            <AnimatePresence mode="wait">
+              <motion.form
+                key={isLogin ? "login" : "signup"}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.2 }}
+                onSubmit={handleSubmit}
+                className="space-y-4"
               >
-                {loading ? (
-                  <span className="flex items-center gap-2">
-                    <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    Processing...
-                  </span>
-                ) : (
-                  <span className="flex items-center gap-2">
-                    {isLogin ? "Sign In" : "Sign Up"}
-                    <ArrowRight className="w-4 h-4" />
-                  </span>
+                {/* Full name – signup only */}
+                {!isLogin && (
+                  <div className="space-y-2">
+                    <Label
+                      htmlFor="fullName"
+                      className="text-white/80 text-xs uppercase tracking-wider font-medium flex items-center gap-2"
+                    >
+                      <User className="w-3.5 h-3.5" /> Full Name
+                    </Label>
+                    <Input
+                      id="fullName"
+                      placeholder="e.g. Rajan Sharma"
+                      value={fullName}
+                      onChange={(e) => setFullName(e.target.value)}
+                      className="bg-white/10 border-white/15 text-white placeholder:text-white/30 rounded-xl h-12 focus:border-primary/60 focus:ring-primary/30"
+                    />
+                  </div>
                 )}
-              </Button>
-            </form>
 
-            <div className="text-center pt-2">
+                {/* Email */}
+                <div className="space-y-2">
+                  <Label
+                    htmlFor="email"
+                    className="text-white/80 text-xs uppercase tracking-wider font-medium flex items-center gap-2"
+                  >
+                    <Mail className="w-3.5 h-3.5" /> Email
+                  </Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="you@company.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                    className="bg-white/10 border-white/15 text-white placeholder:text-white/30 rounded-xl h-12 focus:border-primary/60 focus:ring-primary/30"
+                  />
+                </div>
+
+                {/* Password */}
+                <div className="space-y-2">
+                  <Label
+                    htmlFor="password"
+                    className="text-white/80 text-xs uppercase tracking-wider font-medium flex items-center gap-2"
+                  >
+                    <Lock className="w-3.5 h-3.5" /> Password
+                  </Label>
+                  <Input
+                    id="password"
+                    type="password"
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    minLength={6}
+                    className="bg-white/10 border-white/15 text-white placeholder:text-white/30 rounded-xl h-12 focus:border-primary/60 focus:ring-primary/30"
+                  />
+                </div>
+
+                <Button
+                  type="submit"
+                  className="w-full h-12 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-base shadow-lg shadow-primary/25 transition-all"
+                  disabled={loading}
+                >
+                  {loading ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <span className="flex items-center gap-2">
+                      {isLogin ? "Sign In" : "Create Account"}
+                      <ArrowRight className="w-4 h-4" />
+                    </span>
+                  )}
+                </Button>
+              </motion.form>
+            </AnimatePresence>
+
+            <div className="text-center pt-1">
               <button
                 type="button"
-                onClick={() => setIsLogin(!isLogin)}
+                onClick={() => { setIsLogin(!isLogin); setFullName(""); }}
                 className="text-sm text-white/50 hover:text-white/80 transition-colors"
               >
-                {isLogin ? "Don't have an account? " : "Already have an account? "}
-                <span className="text-primary font-medium">{isLogin ? "Sign up" : "Sign in"}</span>
+                {isLogin ? "No account yet? " : "Already have an account? "}
+                <span className="text-primary font-medium">
+                  {isLogin ? "Sign up" : "Sign in"}
+                </span>
               </button>
             </div>
           </motion.div>
         </motion.div>
 
-        {/* Bottom feature pills */}
+        {/* Feature pills */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.6 }}
           className="flex flex-wrap justify-center gap-2 mt-8"
         >
-          {["Face Attendance", "Real-time Tracking", "Smart Reports", "Project Management"].map((feature) => (
+          {["Face Attendance", "Real-time Tracking", "Smart Reports", "Multi-Company"].map((f) => (
             <span
-              key={feature}
+              key={f}
               className="px-4 py-1.5 rounded-full bg-white/10 backdrop-blur-lg border border-white/10 text-white/70 text-xs font-medium"
             >
-              {feature}
+              {f}
             </span>
           ))}
         </motion.div>

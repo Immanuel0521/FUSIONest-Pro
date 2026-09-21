@@ -17,6 +17,8 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { NotificationBell } from "@/components/NotificationBell";
 import { useUserRole } from "@/hooks/useUserRole";
 import logo from "@/assets/fusionest-logo.png";
+import { CompanySwitcher } from "@/components/auth/CompanySwitcher";
+
 
 const allNavItems = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard, roles: ["admin", "management", "supervisor"] },
@@ -116,7 +118,13 @@ export const Navbar = () => {
               <span className="text-foreground">est</span>
             </h2>
           </div>
+
+          {/* Company switcher */}
+          <div className="hidden sm:block">
+            <CompanySwitcher />
+          </div>
         </div>
+
 
         {/* Desktop navigation */}
         <nav className="hidden lg:flex items-center gap-0.5">
