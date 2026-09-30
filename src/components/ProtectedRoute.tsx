@@ -30,6 +30,13 @@ export const ProtectedRoute = ({
       setIsAuthenticated(!!session);
       setAuthLoading(false);
     });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setIsAuthenticated(!!session);
+      setAuthLoading(false);
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
   const loading = authLoading || companyLoading;
@@ -53,6 +60,11 @@ export const ProtectedRoute = ({
   // Authenticated but no company yet → onboarding
   if (requireAuth && isAuthenticated && !skipCompanyCheck && memberships.length === 0) {
     return <Navigate to="/onboarding" replace />;
+  }
+
+  // Company is suspended → show suspended screen
+  if (requireAuth && isAuthenticated && !skipCompanyCheck && activeCompany && activeCompany.is_active === false) {
+    return <Navigate to="/access-suspended" replace />;
   }
 
   // Role check against company membership role

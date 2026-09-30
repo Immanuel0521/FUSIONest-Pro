@@ -14,6 +14,8 @@ export interface Company {
   address: string | null;
   created_by: string | null;
   created_at: string;
+  is_active: boolean;
+  suspended_reason: string | null;
 }
 
 export interface CompanyMembership {
@@ -59,8 +61,10 @@ export function CompanyProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   const loadCompanies = useCallback(async () => {
+    setLoading(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { session } } = await supabase.auth.getSession();
+      const user = session?.user;
       if (!user) {
         setMemberships([]);
         setActiveCompanyId(null);
@@ -112,7 +116,9 @@ export function CompanyProvider({ children }: { children: React.ReactNode }) {
     loadCompanies();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === "SIGNED_IN" || event === "USER_UPDATED") loadCompanies();
+      if (event === "SIGNED_IN" || event === "USER_UPDATED" || event === "TOKEN_REFRESHED") {
+        loadCompanies();
+      }
       if (event === "SIGNED_OUT") {
         setMemberships([]);
         setActiveCompanyId(null);

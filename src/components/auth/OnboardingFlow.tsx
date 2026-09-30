@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/lib/supabase";
@@ -41,9 +41,20 @@ const slide = {
 // ── Main component ─────────────────────────────────────────────────────────────
 export function OnboardingFlow() {
   const navigate = useNavigate();
-  const { refreshCompanies } = useCompanyContext();
+  const { refreshCompanies, memberships, activeCompany, userRole } = useCompanyContext();
   const [step, setStep] = useState<Step>("choice");
   const [loading, setLoading] = useState(false);
+
+  // If user already has companies and visits /onboarding directly without query params, they can go back
+  const hasExistingCompany = memberships.length > 0;
+
+  // Only admins can create or add a secondary company
+  useEffect(() => {
+    if (hasExistingCompany && userRole && userRole !== "admin") {
+      toast.error("Only administrators have permission to create or add secondary companies.");
+      navigate("/dashboard", { replace: true });
+    }
+  }, [hasExistingCompany, userRole, navigate]);
 
   // Create form
   const [companyName, setCompanyName] = useState("");
@@ -57,53 +68,44 @@ export function OnboardingFlow() {
 
   // ── Helpers ──────────────────────────────────────────────────────────────────
   const currentUser = async () => {
+    // Use getSession first to ensure token is refreshed, then getUser
+    await supabase.auth.getSession();
     const { data: { user } } = await supabase.auth.getUser();
     return user;
   };
 
   // ── Create company ───────────────────────────────────────────────────────────
   const handleCreate = async () => {
+    if (hasExistingCompany && userRole !== "admin") {
+      toast.error("Only administrators can create additional companies.");
+      return;
+    }
     if (!companyName.trim()) { toast.error("Company name is required"); return; }
     setLoading(true);
     try {
-      const user = await currentUser();
-      if (!user) throw new Error("Not authenticated");
+      // Validate session explicitly before any DB call
+      const { data: { session }, error: sessErr } = await supabase.auth.getSession();
+      if (sessErr || !session) {
+        toast.error("Session expired — please log in again.");
+        await supabase.auth.signOut();
+        navigate("/");
+        return;
+      }
 
-      // Generate unique codes
-      const { data: cc } = await (supabase.rpc as any)("gen_company_code");
-      const { data: jc } = await (supabase.rpc as any)("gen_join_code");
-
-      // Insert company
-      const { data: company, error: cErr } = await (supabase
-        .from("companies")
-        .insert({
-          name: companyName.trim(),
-          industry: industry || null,
-          address: address || null,
-          company_code: cc,
-          join_code: jc,
-          created_by: user.id,
-        })
-        .select()
-        .single() as any);
+      // Use SECURITY DEFINER RPC — bypasses all RLS issues, validates auth server-side
+      const { data: company, error: cErr } = await (supabase.rpc as any)(
+        "create_company_for_user",
+        {
+          p_name:     companyName.trim(),
+          p_industry: industry || null,
+          p_address:  address || null,
+        }
+      );
 
       if (cErr) throw cErr;
 
-      // Add creator as admin member
-      const { error: mErr } = await (supabase
-        .from("company_members")
-        .insert({ company_id: company.id, user_id: user.id, role: "admin" }) as any);
-      if (mErr) throw mErr;
-
-      // Set as active company in profile
-      await (supabase.from("user_profiles") as any).upsert({
-        id: user.id,
-        active_company_id: company.id,
-        updated_at: new Date().toISOString(),
-      }, { onConflict: "id" });
-
       await refreshCompanies();
-      toast.success(`Company "${company.name}" created! Your Join Code: ${jc}`);
+      toast.success(`Company "${company.name}" created! Your Join Code: ${company.join_code}`);
       navigate("/dashboard");
     } catch (e: any) {
       toast.error(e.message || "Failed to create company");
@@ -137,22 +139,26 @@ export function OnboardingFlow() {
 
   // ── Confirm join ─────────────────────────────────────────────────────────────
   const handleJoin = async () => {
+    if (hasExistingCompany && userRole !== "admin") {
+      toast.error("Only administrators can join additional companies.");
+      return;
+    }
     if (!foundCompany) return;
     setLoading(true);
     try {
-      const user = await currentUser();
-      if (!user) throw new Error("Not authenticated");
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast.error("Session expired — please log in again.");
+        navigate("/");
+        return;
+      }
 
-      const { error: mErr } = await (supabase
-        .from("company_members")
-        .insert({ company_id: foundCompany.id, user_id: user.id, role: joinRole }) as any);
+      // Use SECURITY DEFINER RPC — bypasses all RLS issues
+      const { error: mErr } = await (supabase.rpc as any)(
+        "join_company_for_user",
+        { p_join_code: foundCompany.join_code, p_role: joinRole }
+      );
       if (mErr) throw mErr;
-
-      await (supabase.from("user_profiles") as any).upsert({
-        id: user.id,
-        active_company_id: foundCompany.id,
-        updated_at: new Date().toISOString(),
-      }, { onConflict: "id" });
 
       await refreshCompanies();
       toast.success(`Joined "${foundCompany.name}" as ${joinRole}`);
@@ -213,6 +219,20 @@ export function OnboardingFlow() {
                   <ArrowRight className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
                 </div>
               </Card>
+
+              {hasExistingCompany && (
+                <div className="pt-2 text-center">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="rounded-xl text-muted-foreground hover:text-foreground gap-1.5"
+                    onClick={() => navigate("/dashboard")}
+                  >
+                    <ArrowLeft className="w-4 h-4" />
+                    Back to {activeCompany?.name || "Dashboard"}
+                  </Button>
+                </div>
+              )}
             </motion.div>
           )}
 

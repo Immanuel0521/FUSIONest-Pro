@@ -37,6 +37,10 @@ import DprHub from "./pages/DprHub";
 import DprWizard from "./pages/DprWizard";
 import DprReview from "./pages/DprReview";
 import DprOverview from "./pages/DprOverview";
+import CompanySettings from "./pages/CompanySettings";
+import SuperAdmin from "./pages/SuperAdmin";
+import AccessSuspended from "./pages/AccessSuspended";
+import StageQualityStandards from "./pages/StageQualityStandards";
 
 const queryClient = new QueryClient();
 
@@ -50,6 +54,8 @@ const AnimatedRoutes = () => {
         <Route path="/" element={<PageTransition><Index /></PageTransition>} />
         <Route path="/attendance-scan" element={<PageTransition><PublicBiometricAttendance /></PageTransition>} />
         <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
+        <Route path="/super-admin" element={<PageTransition><SuperAdmin /></PageTransition>} />
+        <Route path="/access-suspended" element={<PageTransition><AccessSuspended /></PageTransition>} />
 
         {/* ── Onboarding (auth required, no company needed yet) ── */}
         <Route
@@ -87,14 +93,19 @@ const AnimatedRoutes = () => {
             <PageTransition><FillChecklist /></PageTransition>
           </ProtectedRoute>
         } />
+        <Route path="/stage-standards" element={
+          <ProtectedRoute allowedRoles={["admin", "management", "supervisor"]}>
+            <PageTransition><StageQualityStandards /></PageTransition>
+          </ProtectedRoute>
+        } />
         <Route path="/methodologies" element={
           <ProtectedRoute allowedRoles={["admin", "management", "supervisor"]}>
-            <PageTransition><Methodologies /></PageTransition>
+            <PageTransition><StageQualityStandards /></PageTransition>
           </ProtectedRoute>
         } />
         <Route path="/checklists" element={
           <ProtectedRoute allowedRoles={["admin", "management", "supervisor"]}>
-            <PageTransition><Checklists /></PageTransition>
+            <PageTransition><StageQualityStandards /></PageTransition>
           </ProtectedRoute>
         } />
         <Route path="/checklists/new" element={
@@ -125,6 +136,11 @@ const AnimatedRoutes = () => {
         <Route path="/admin" element={
           <ProtectedRoute allowedRoles={["admin"]}>
             <PageTransition><Admin /></PageTransition>
+          </ProtectedRoute>
+        } />
+        <Route path="/company-settings" element={
+          <ProtectedRoute allowedRoles={["admin"]}>
+            <PageTransition><CompanySettings /></PageTransition>
           </ProtectedRoute>
         } />
         <Route path="/profile" element={

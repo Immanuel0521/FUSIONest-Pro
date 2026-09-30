@@ -22,11 +22,27 @@ import { Link } from "react-router-dom";
 import { format } from "date-fns";
 import { useUserRole } from "@/hooks/useUserRole";
 import ManagementDashboard from "@/components/dashboards/ManagementDashboard";
+import SupervisorDashboard from "@/components/dashboards/SupervisorDashboard";
+import WorkerDashboard from "@/components/dashboards/WorkerDashboard";
+import AdminDashboard from "@/components/dashboards/AdminDashboard";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Eye, Shield, UserCog, HardHat, Crown } from "lucide-react";
 
 export default function Dashboard() {
   const { role } = useUserRole();
-  if (role === "management") return <ManagementDashboard />;
-  return <DefaultDashboard />;
+
+  switch (role) {
+    case "worker":
+      return <WorkerDashboard />;
+    case "supervisor":
+      return <SupervisorDashboard />;
+    case "management":
+      return <ManagementDashboard />;
+    case "admin":
+    default:
+      return <AdminDashboard />;
+  }
 }
 
 function DefaultDashboard() {

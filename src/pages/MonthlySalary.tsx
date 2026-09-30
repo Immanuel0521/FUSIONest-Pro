@@ -22,6 +22,9 @@ import {
   calculateEarlyOT,
   calculateEveningOT,
 } from "@/lib/attendanceConfig";
+import { useCompanyContext } from "@/context/CompanyContext";
+import { fetchCompanyHolidays } from "@/lib/holidayConfig";
+import { round2 } from "@/lib/attendanceMetrics";
 
 interface Worker {
   id: string;
@@ -64,6 +67,7 @@ interface MonthlySalaryProps {
 type SortKey = 'name' | 'days' | 'ot' | 'salary';
 
 export default function MonthlySalary({ embedded = false }: MonthlySalaryProps) {
+  const { activeCompany } = useCompanyContext();
   const [stats, setStats] = useState<MonthlySalaryStats[]>([]);
   const [selectedMonth, setSelectedMonth] = useState(() => {
     const now = new Date();
@@ -81,10 +85,15 @@ export default function MonthlySalary({ embedded = false }: MonthlySalaryProps) 
 
   useEffect(() => {
     loadMonthlySalaryStats();
-  }, [selectedMonth]);
+  }, [selectedMonth, activeCompany?.id]);
 
   const loadMonthlySalaryStats = async () => {
     setLoading(true);
+
+    const companyId = activeCompany?.id || "default";
+    const companyHolidays = await fetchCompanyHolidays(companyId);
+    const holidayMap = new Map<string, string>();
+    companyHolidays.forEach(h => holidayMap.set(h.holiday_date, h.name));
 
     const { data: workers } = await supabase
       .from('workers')
@@ -121,44 +130,71 @@ export default function MonthlySalary({ embedded = false }: MonthlySalaryProps) 
       
       const effectiveEndDate = todayStr < endDate ? todayStr : endDate;
       
-      // Count working days attended
-      const daysWorked = workerAttendance.filter(a => 
-        a.date >= effectiveStartDate && a.date <= effectiveEndDate
-      ).length;
-
-      // Calculate total OT with early morning OT
+      let regularWorkdaysAttended = 0;
+      let sundayShiftsWorked = 0;
+      let holidayShiftsWorked = 0;
       let totalOtHours = 0;
       const overtimeDetails: { date: string; hours: number; timeIn: string; timeOut: string; earlyOT: number; eveningOT: number; notes: string | null }[] = [];
 
       workerAttendance.forEach(a => {
+        if (a.date < effectiveStartDate || a.date > effectiveEndDate) return;
+
         const checkIn = new Date(a.time_in);
-        const earlyOT = calculateEarlyOT(checkIn);
-        let eveningOT = 0;
-        if (a.time_out) {
-          const checkOut = new Date(a.time_out);
-          eveningOT = calculateEveningOT(checkIn, checkOut);
-        }
-        const dayOT = earlyOT + eveningOT;
-        
-        if (dayOT > 0) {
-          totalOtHours += dayOT;
-          overtimeDetails.push({
-            date: a.date,
-            hours: dayOT,
-            timeIn: a.time_in,
-            timeOut: a.time_out || '',
-            earlyOT,
-            eveningOT,
-            notes: (a as any).notes_out || (a as any).notes_in || null,
-          });
+        const checkOut = a.time_out ? new Date(a.time_out) : null;
+        const isSun = checkIn.getDay() === 0;
+        const holName = holidayMap.get(a.date);
+        const isHol = Boolean(holName);
+
+        if (isSun || isHol) {
+          // Sunday or Holiday: ALL hours worked are 100% OVERTIME
+          if (isSun) sundayShiftsWorked++;
+          if (isHol) holidayShiftsWorked++;
+
+          const rawHours = checkOut ? Math.max(0, (checkOut.getTime() - checkIn.getTime()) / 3_600_000) : 8;
+          const offDayOT = rawHours > LUNCH_BREAK_HOURS ? rawHours - LUNCH_BREAK_HOURS : rawHours;
+
+          if (offDayOT > 0) {
+            totalOtHours += offDayOT;
+            const dutyType = isSun ? "Sunday Duty (100% OT)" : `Holiday Duty: ${holName} (100% OT)`;
+            overtimeDetails.push({
+              date: a.date,
+              hours: round2(offDayOT),
+              timeIn: a.time_in,
+              timeOut: a.time_out || '',
+              earlyOT: 0,
+              eveningOT: round2(offDayOT),
+              notes: (a as any).notes_out || (a as any).notes_in || dutyType,
+            });
+          }
+        } else {
+          // Regular workday
+          regularWorkdaysAttended++;
+          const earlyOT = calculateEarlyOT(checkIn);
+          let eveningOT = 0;
+          if (checkOut) {
+            eveningOT = calculateEveningOT(checkIn, checkOut);
+          }
+          const dayOT = earlyOT + eveningOT;
+          if (dayOT > 0) {
+            totalOtHours += dayOT;
+            overtimeDetails.push({
+              date: a.date,
+              hours: round2(dayOT),
+              timeIn: a.time_in,
+              timeOut: a.time_out || '',
+              earlyOT: round2(earlyOT),
+              eveningOT: round2(eveningOT),
+              notes: (a as any).notes_out || (a as any).notes_in || null,
+            });
+          }
         }
       });
 
       const otMinutes = Math.round(totalOtHours * 60);
 
-      // Calculate salary
+      // Calculate salary based on regular workdays attended + total OT
       const salaryCalc = calculateSalary(
-        daysWorked,
+        regularWorkdaysAttended,
         worker.monthly_salary || 0,
         totalOtHours,
         worker.ot_rate_per_hour || 0
@@ -168,7 +204,7 @@ export default function MonthlySalary({ embedded = false }: MonthlySalaryProps) 
         workerId: worker.id,
         workerName: worker.full_name,
         photoUrl: worker.photo_url,
-        totalWorkingDays: daysWorked,
+        totalWorkingDays: regularWorkdaysAttended + sundayShiftsWorked + holidayShiftsWorked,
         monthlySalary: worker.monthly_salary || 0,
         perDayWage: salaryCalc.perDayWage,
         basicSalary: salaryCalc.basicSalary,

@@ -51,26 +51,25 @@ export function ProfilePhotoUpload({
 
       if (uploadError) throw uploadError;
 
-      // Get signed URL with 1 hour expiration for better security
-      const { data: signedUrlData, error: signedUrlError } = await supabase.storage
+      // Get persistent public URL (bucket is public)
+      const { data: { publicUrl } } = supabase.storage
         .from('profile-photos')
-        .createSignedUrl(fileName, 3600); // 1 hour expiration
+        .getPublicUrl(fileName);
 
-      if (signedUrlError) throw signedUrlError;
+      const persistentUrl = `${publicUrl}?t=${Date.now()}`;
 
-      // Update profile with the storage path (not the URL) for future signed URL generation
-      // Store both the path and a current signed URL for immediate display
+      // Update profile with public URL
       const { error: updateError } = await supabase
         .from('user_profiles')
         .upsert({
           id: userId,
-          photo_url: signedUrlData.signedUrl,
+          photo_url: persistentUrl,
           updated_at: new Date().toISOString()
         });
 
       if (updateError) throw updateError;
 
-      onPhotoUpdate(signedUrlData.signedUrl);
+      onPhotoUpdate(persistentUrl);
       toast.success("Profile photo updated successfully!");
     } catch (error: any) {
       console.error('Upload error:', error);

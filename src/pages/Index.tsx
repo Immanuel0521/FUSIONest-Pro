@@ -22,7 +22,7 @@ const Index = () => {
 
       if (session) {
         const next = safeNext();
-        navigate(next ?? "/dashboard");
+        navigate(next ?? "/dashboard", { replace: true });
       } else {
         setLoading(false);
       }
@@ -33,7 +33,7 @@ const Index = () => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (session) {
         const next = safeNext();
-        navigate(next ?? "/dashboard");
+        navigate(next ?? "/dashboard", { replace: true });
       }
     });
 

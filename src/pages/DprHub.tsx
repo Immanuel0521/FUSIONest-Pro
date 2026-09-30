@@ -8,7 +8,7 @@ import { supabase } from "@/lib/supabase";
 import { ClipboardList, AlertTriangle, ArrowRight } from "lucide-react";
 import { format } from "date-fns";
 
-export default function DprHub() {
+export default function DprHub({ embedded }: { embedded?: boolean } = {}) {
   const [reports, setReports] = useState<any[]>([]);
   const [alerts, setAlerts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -32,9 +32,9 @@ export default function DprHub() {
     not_started: "bg-muted text-muted-foreground",
   } as any)[s] || "bg-muted";
 
-  return (
-    <DashboardLayout>
-      <div className="space-y-5">
+  const content = (
+    <div className="space-y-5">
+      {!embedded && (
         <div className="flex items-center gap-3">
           <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-primary to-accent flex items-center justify-center">
             <ClipboardList className="w-6 h-6 text-white" />
@@ -44,6 +44,7 @@ export default function DprHub() {
             <p className="text-sm text-muted-foreground">Daily progress reports across every project</p>
           </div>
         </div>
+      )}
 
         {alerts.length > 0 && (
           <Card className="glass-card rounded-2xl p-5">
@@ -86,6 +87,15 @@ export default function DprHub() {
            </div>}
         </Card>
       </div>
+  );
+
+  if (embedded) {
+    return content;
+  }
+
+  return (
+    <DashboardLayout>
+      {content}
     </DashboardLayout>
   );
 }

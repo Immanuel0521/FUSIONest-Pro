@@ -15,7 +15,7 @@ import { ImportChecklistDialog } from "@/components/checklists/ImportChecklistDi
 
 const STAGES: (ChecklistStage | "all")[] = ["all", "pre_work", "during_work", "post_work", "quality_check", "safety_inspection"];
 
-export default function Checklists() {
+export default function Checklists({ embedded }: { embedded?: boolean } = {}) {
   const { templates, loading, reload } = useChecklistTemplates();
   const { role } = useUserRole();
   const isAdmin = role === "admin";
@@ -36,10 +36,9 @@ export default function Checklists() {
     if (error) toast.error(error.message); else { toast.success("Deleted"); reload(); }
   };
 
-  return (
-    <DashboardLayout>
-      <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} className="space-y-5">
-        <div className="flex flex-wrap items-center justify-between gap-3">
+  const content = (
+    <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} className="space-y-5">
+      <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h1 className="text-2xl font-bold flex items-center gap-2" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
               <ClipboardCheck className="w-6 h-6 text-primary" /> Checklists
@@ -110,6 +109,15 @@ export default function Checklists() {
 
         <ImportChecklistDialog open={importOpen} onOpenChange={setImportOpen} onSaved={reload} />
       </motion.div>
+  );
+
+  if (embedded) {
+    return content;
+  }
+
+  return (
+    <DashboardLayout>
+      {content}
     </DashboardLayout>
   );
 }

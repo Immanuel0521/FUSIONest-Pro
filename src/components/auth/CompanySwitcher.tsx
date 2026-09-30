@@ -88,14 +88,16 @@ export function CompanySwitcher() {
           </>
         )}
 
-        {/* Join another company */}
-        <DropdownMenuItem
-          onClick={() => navigate("/onboarding")}
-          className="rounded-xl cursor-pointer gap-2 px-3 text-primary"
-        >
-          <Plus className="w-4 h-4" />
-          <span className="text-sm">Add / Join Another Company</span>
-        </DropdownMenuItem>
+        {/* Join another company - Only admin can create or add a secondary company */}
+        {userRole === "admin" && (
+          <DropdownMenuItem
+            onClick={() => navigate("/onboarding")}
+            className="rounded-xl cursor-pointer gap-2 px-3 text-primary"
+          >
+            <Plus className="w-4 h-4" />
+            <span className="text-sm">Add / Join Another Company</span>
+          </DropdownMenuItem>
+        )}
       </DropdownMenuContent>
     </DropdownMenu>
   );

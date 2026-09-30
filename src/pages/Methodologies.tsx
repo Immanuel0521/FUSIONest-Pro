@@ -15,7 +15,7 @@ import { format } from "date-fns";
 
 const CATEGORIES = ["all", "Foundation", "Structure", "Finishing", "MEP", "Safety", "General"];
 
-export default function Methodologies() {
+export default function Methodologies({ embedded }: { embedded?: boolean } = {}) {
   const { items, loading, reload } = useMethodologies();
   const { role } = useUserRole();
   const isAdmin = role === "admin";
@@ -52,12 +52,11 @@ export default function Methodologies() {
     if (error) toast.error(error.message); else { toast.success("Deleted"); reload(); }
   };
 
-  return (
-    <DashboardLayout>
-      <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} className="space-y-5">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h1 className="text-2xl font-bold flex items-center gap-2" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+  const content = (
+    <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} className="space-y-5">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold flex items-center gap-2" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
               <BookOpen className="w-6 h-6 text-primary" /> Methodologies
             </h1>
             <p className="text-sm text-muted-foreground">Construction work procedures and standards</p>
@@ -114,7 +113,20 @@ export default function Methodologies() {
           </div>
         )}
       </motion.div>
+  );
 
+  if (embedded) {
+    return (
+      <>
+        {content}
+        {isAdmin && <MethodologyUploadDialog open={uploadOpen} onOpenChange={setUploadOpen} onSaved={reload} />}
+      </>
+    );
+  }
+
+  return (
+    <DashboardLayout>
+      {content}
       {isAdmin && <MethodologyUploadDialog open={uploadOpen} onOpenChange={setUploadOpen} onSaved={reload} />}
     </DashboardLayout>
   );

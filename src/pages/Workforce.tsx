@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Users, ClipboardCheck, Fingerprint } from "lucide-react";
+import { Users, ClipboardCheck, Fingerprint, MapPin } from "lucide-react";
 import { motion } from "framer-motion";
 import Workers from "./Workers";
 import Attendance from "./Attendance";
 import BiometricAttendance from "./BiometricAttendance";
+import WorkAllocationHistory from "./WorkAllocationHistory";
 
 export default function Workforce() {
   const [activeTab, setActiveTab] = useState("workers");
@@ -26,32 +27,39 @@ export default function Workforce() {
             <h1 className="text-3xl font-bold bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent">
               Workforce Management
             </h1>
-            <p className="text-sm text-muted-foreground">Manage workers and track attendance</p>
+            <p className="text-sm text-muted-foreground">Manage workers, track attendance, and oversee site work allocations</p>
           </div>
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="glass-card p-1 border border-primary/10 h-12">
+          <TabsList className="glass-card p-1 border border-primary/10 h-12 flex-wrap">
             <TabsTrigger 
               value="workers" 
-              className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-accent data-[state=active]:text-white transition-all px-6 py-2 text-sm font-medium gap-2"
+              className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-accent data-[state=active]:text-white transition-all px-5 py-2 text-sm font-medium gap-2"
             >
               <Users className="w-4 h-4" />
               Workers
             </TabsTrigger>
             <TabsTrigger 
               value="attendance"
-              className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-accent data-[state=active]:text-white transition-all px-6 py-2 text-sm font-medium gap-2"
+              className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-accent data-[state=active]:text-white transition-all px-5 py-2 text-sm font-medium gap-2"
             >
               <ClipboardCheck className="w-4 h-4" />
               Attendance
             </TabsTrigger>
             <TabsTrigger 
               value="biometric"
-              className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-accent data-[state=active]:text-white transition-all px-6 py-2 text-sm font-medium gap-2"
+              className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-accent data-[state=active]:text-white transition-all px-5 py-2 text-sm font-medium gap-2"
             >
               <Fingerprint className="w-4 h-4" />
               Biometric
+            </TabsTrigger>
+            <TabsTrigger 
+              value="allocation"
+              className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-accent data-[state=active]:text-white transition-all px-5 py-2 text-sm font-medium gap-2"
+            >
+              <MapPin className="w-4 h-4" />
+              Work Allocation
             </TabsTrigger>
           </TabsList>
 
@@ -82,6 +90,16 @@ export default function Workforce() {
               transition={{ duration: 0.3 }}
             >
               <BiometricAttendance embedded />
+            </motion.div>
+          </TabsContent>
+
+          <TabsContent value="allocation" className="mt-6">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3 }}
+            >
+              <WorkAllocationHistory embedded />
             </motion.div>
           </TabsContent>
         </Tabs>

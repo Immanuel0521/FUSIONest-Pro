@@ -57,20 +57,21 @@ export function buildTimes(dateStr: string, timeInStr: string, timeOutStr: strin
 }
 
 /** Compute all attendance metrics from two Dates. */
-export function computeMetrics(timeIn: Date, timeOut: Date): AttendanceMetrics {
+export function computeMetrics(timeIn: Date, timeOut: Date, isHoliday = false): AttendanceMetrics {
   const isSundayShift = timeIn.getDay() === 0;
+  const isOffDayShift = isSundayShift || isHoliday;
   const rawHours = Math.max(0, (timeOut.getTime() - timeIn.getTime()) / 3_600_000);
 
-  // ── Sunday: every worked hour is OT (minus 1 h unpaid lunch) ──────────────
-  if (isSundayShift) {
-    const sundayOT = rawHours > LUNCH_BREAK_HOURS
+  // ── Sunday or Holiday: every worked hour is OT (minus 1 h unpaid lunch) ──────────────
+  if (isOffDayShift) {
+    const offDayOT = rawHours > LUNCH_BREAK_HOURS
       ? rawHours - LUNCH_BREAK_HOURS
       : rawHours;
     return {
       timeIn, timeOut,
       isLate: false, lateMinutes: 0, earlyExit: false,
       totalHours: 0, rawHours,
-      earlyOT: 0, eveningOT: sundayOT, overtimeHours: sundayOT,
+      earlyOT: 0, eveningOT: offDayOT, overtimeHours: offDayOT,
     };
   }
 
@@ -130,12 +131,21 @@ export function computeMetrics(timeIn: Date, timeOut: Date): AttendanceMetrics {
   };
 }
 
-export function metricsFromStrings(dateStr: string, timeInStr: string, timeOutStr: string) {
+export function metricsFromStrings(dateStr: string, timeInStr: string, timeOutStr: string, isHoliday = false) {
   const { timeIn, timeOut } = buildTimes(dateStr, timeInStr, timeOutStr);
-  return computeMetrics(timeIn, timeOut);
+  return computeMetrics(timeIn, timeOut, isHoliday);
 }
 
-export type DayStatus = "present" | "half_day" | "absent" | "in_progress" | "sunday" | "not_joined";
+export type DayStatus =
+  | "present"
+  | "half_day"
+  | "absent"
+  | "in_progress"
+  | "sunday"
+  | "sunday_worked"
+  | "holiday"
+  | "holiday_worked"
+  | "not_joined";
 
 export interface DayCell {
   status: DayStatus;
@@ -145,41 +155,57 @@ export interface DayCell {
   early: boolean;
   timeIn?: string;
   timeOut?: string;
+  holidayName?: string;
 }
 
 /** Classify a single stored attendance log into a report cell. */
-export function classifyLog(log: {
-  time_in: string;
-  time_out: string | null;
-  total_hours: number | null;
-  overtime_hours: number | null;
-  is_late: boolean | null;
-  early_exit: boolean | null;
-}): DayCell {
+export function classifyLog(
+  log: {
+    time_in: string;
+    time_out: string | null;
+    total_hours: number | null;
+    overtime_hours: number | null;
+    is_late: boolean | null;
+    early_exit: boolean | null;
+  },
+  isHolidayDate = false,
+  holidayName?: string
+): DayCell {
   const timeIn = new Date(log.time_in);
+  const isSunday = timeIn.getDay() === 0;
+
   if (!log.time_out) {
     return {
       status: "in_progress",
       hours: 0,
       ot: 0,
-      late: !!log.is_late,
+      late: !isSunday && !isHolidayDate && !!log.is_late,
       early: false,
       timeIn: fmtTime(timeIn),
+      holidayName,
     };
   }
   const timeOut = new Date(log.time_out);
-  const m = computeMetrics(timeIn, timeOut);
-  const isSunday = timeIn.getDay() === 0;
-  // On Sunday totalHours=0 (all OT), so use rawHours for present/half_day check.
-  const hoursForStatus = isSunday ? m.rawHours : m.totalHours;
+  const m = computeMetrics(timeIn, timeOut, isHolidayDate);
+
+  let status: DayStatus = "present";
+  if (isSunday) {
+    status = "sunday_worked";
+  } else if (isHolidayDate) {
+    status = "holiday_worked";
+  } else if (m.totalHours > 0 && m.totalHours < HALF_DAY_MAX_HOURS) {
+    status = "half_day";
+  }
+
   return {
-    status: hoursForStatus > 0 && hoursForStatus < HALF_DAY_MAX_HOURS ? "half_day" : "present",
+    status,
     hours: round2(m.totalHours),
     ot: round2(m.overtimeHours),
     late: m.isLate,
     early: m.earlyExit,
     timeIn: fmtTime(timeIn),
     timeOut: fmtTime(timeOut),
+    holidayName,
   };
 }
 
@@ -200,20 +226,26 @@ export function hoursToHM(hours: number) {
 }
 
 export const STATUS_LABEL: Record<DayStatus, string> = {
-  present:     "P",
-  half_day:    "HD",
-  absent:      "A",
-  in_progress: "IN",
-  sunday:      "S",
-  not_joined:  "-",
+  present:        "P",
+  half_day:       "HD",
+  absent:         "A",
+  in_progress:    "IN",
+  sunday:         "S",
+  sunday_worked:  "SW",
+  holiday:        "H",
+  holiday_worked: "HW",
+  not_joined:     "-",
 };
 
 /** Hex colors used for both PDF and Excel so the two exports match. */
 export const STATUS_COLORS: Record<DayStatus, { bg: string; text: string }> = {
-  present:     { bg: "D1FAE5", text: "047857" },
-  half_day:    { bg: "FEF3C7", text: "92400E" },
-  absent:      { bg: "FEE2E2", text: "B91C1C" },
-  in_progress: { bg: "DBEAFE", text: "1D4ED8" },
-  sunday:      { bg: "E5E7EB", text: "6B7280" },
-  not_joined:  { bg: "F9FAFB", text: "9CA3AF" },
+  present:        { bg: "D1FAE5", text: "047857" },
+  half_day:       { bg: "FEF3C7", text: "92400E" },
+  absent:         { bg: "FEE2E2", text: "B91C1C" },
+  in_progress:    { bg: "DBEAFE", text: "1D4ED8" },
+  sunday:         { bg: "F3F4F6", text: "6B7280" },
+  sunday_worked:  { bg: "E0E7FF", text: "4338CA" },
+  holiday:        { bg: "E0F2FE", text: "0369A1" },
+  holiday_worked: { bg: "EDE9FE", text: "6D28D9" },
+  not_joined:     { bg: "F9FAFB", text: "9CA3AF" },
 };

@@ -1,12 +1,13 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { FolderKanban, Plus, BarChart3, Activity } from "lucide-react";
+import { FolderKanban, Plus, BarChart3, Activity, ClipboardList } from "lucide-react";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ProjectList } from "@/components/projects/ProjectList";
 import { ActivityLogForm } from "@/components/projects/ActivityLogForm";
 import { ActivityFeed } from "@/components/projects/ActivityFeed";
 import { ProgressCharts } from "@/components/projects/ProgressCharts";
+import DprHub from "./DprHub";
 
 export default function Projects() {
   const [tab, setTab] = useState("overview");
@@ -26,11 +27,12 @@ export default function Projects() {
         </div>
 
         <Tabs value={tab} onValueChange={setTab}>
-          <TabsList className="glass-card p-1 h-11">
+          <TabsList className="glass-card p-1 h-11 flex-wrap">
             <TabsTrigger value="overview" className="gap-2 px-4"><FolderKanban className="w-4 h-4" /> Overview</TabsTrigger>
             <TabsTrigger value="log" className="gap-2 px-4"><Plus className="w-4 h-4" /> Log Activity</TabsTrigger>
             <TabsTrigger value="feed" className="gap-2 px-4"><Activity className="w-4 h-4" /> Activity Feed</TabsTrigger>
             <TabsTrigger value="reports" className="gap-2 px-4"><BarChart3 className="w-4 h-4" /> Reports</TabsTrigger>
+            <TabsTrigger value="dpr" className="gap-2 px-4"><ClipboardList className="w-4 h-4" /> Site DPR</TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview" className="mt-5">
@@ -44,6 +46,9 @@ export default function Projects() {
           </TabsContent>
           <TabsContent value="reports" className="mt-5">
             <ProgressCharts refreshKey={refreshKey} />
+          </TabsContent>
+          <TabsContent value="dpr" className="mt-5">
+            <DprHub embedded />
           </TabsContent>
         </Tabs>
       </motion.div>

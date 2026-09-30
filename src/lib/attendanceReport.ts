@@ -16,8 +16,11 @@ export interface MatrixRow {
   designation: string | null;
   cells: Record<string, DayCell>; // keyed by yyyy-mm-dd
   presentDays: number;
+  sundayWorkedDays: number;
+  holidayWorkedDays: number;
   halfDays: number;
   absentDays: number;
+  totalDaysWorked: number;
   totalHours: number;
   totalOT: number;
   lateCount: number;
@@ -28,6 +31,9 @@ export interface MatrixData {
   monthLabel: string;
   dates: string[];
   rows: MatrixRow[];
+  workingDaysCount?: number;
+  sundaysCount?: number;
+  holidaysCount?: number;
 }
 
 const dayNum = (d: string) => String(Number(d.split("-")[2]));
@@ -43,7 +49,7 @@ export async function exportMatrixExcel(data: MatrixData) {
     views: [{ state: "frozen", xSplit: 2, ySplit: 3 }],
   });
 
-  const totalCols = 2 + data.dates.length + 6;
+  const totalCols = 2 + data.dates.length + 8;
 
   ws.mergeCells(1, 1, 1, totalCols);
   const title = ws.getCell(1, 1);
@@ -53,11 +59,23 @@ export async function exportMatrixExcel(data: MatrixData) {
 
   ws.mergeCells(2, 1, 2, totalCols);
   const legend = ws.getCell(2, 1);
-  legend.value = "P = Present   HD = Half day   A = Absent   IN = No check-out   S = Sunday   (hours / OT shown in tooltips columns at right)";
+  legend.value = "P = Present (Workday)   HD = Half day   A = Absent   SW = Sunday Worked (OT)   HW = Holiday Worked (OT)   S = Sunday (Off)   H = Holiday (Off)";
   legend.font = { name: "Arial", size: 9, italic: true, color: { argb: "FF6B7280" } };
   legend.alignment = { horizontal: "center" };
 
-  const header = ["#", "Worker Name", ...data.dates.map((d) => `${dayNum(d)} ${weekday(d)}`), "Present", "Half Days", "Absent", "Total Hours", "OT Hours", "Late"];
+  const header = [
+    "#",
+    "Worker Name",
+    ...data.dates.map((d) => `${dayNum(d)} ${weekday(d)}`),
+    "Workdays Present",
+    "Sunday OT",
+    "Holiday OT",
+    "Total Worked",
+    "Absent",
+    "Total Regular Hours",
+    "Total OT Hours",
+    "Late (Days)",
+  ];
   const headerRow = ws.addRow([]);
   ws.spliceRows(3, 1, header);
   const hr = ws.getRow(3);
@@ -78,7 +96,9 @@ export async function exportMatrixExcel(data: MatrixData) {
     });
     values.push(
       row.presentDays,
-      row.halfDays,
+      row.sundayWorkedDays || 0,
+      row.holidayWorkedDays || 0,
+      row.totalDaysWorked || row.presentDays,
       row.absentDays,
       round2(row.totalHours),
       round2(row.totalOT),
@@ -98,12 +118,13 @@ export async function exportMatrixExcel(data: MatrixData) {
       c.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF" + colors.bg } };
       c.font = { name: "Arial", size: 9, bold: true, color: { argb: "FF" + colors.text } };
       if (cell && cell.status !== "absent") {
-        c.note = `In: ${cell.timeIn || "—"}\nOut: ${cell.timeOut || "—"}\nHours: ${hoursToHM(cell.hours)}\nOT: ${hoursToHM(cell.ot)}`;
+        const hol = cell.holidayName ? `\nHoliday: ${cell.holidayName}` : "";
+        c.note = `In: ${cell.timeIn || "—"}\nOut: ${cell.timeOut || "—"}\nHours: ${hoursToHM(cell.hours)}\nOT: ${hoursToHM(cell.ot)}${hol}`;
       }
     });
 
     // OT column highlight
-    const otCell = r.getCell(2 + data.dates.length + 5);
+    const otCell = r.getCell(2 + data.dates.length + 7);
     if (row.totalOT > 0) {
       otCell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFEDE9FE" } };
       otCell.font = { name: "Arial", size: 9, bold: true, color: { argb: "FF6D28D9" } };
@@ -113,7 +134,7 @@ export async function exportMatrixExcel(data: MatrixData) {
   ws.getColumn(1).width = 5;
   ws.getColumn(2).width = 26;
   data.dates.forEach((_, i) => (ws.getColumn(3 + i).width = 5));
-  for (let i = 0; i < 6; i++) ws.getColumn(3 + data.dates.length + i).width = 12;
+  for (let i = 0; i < 8; i++) ws.getColumn(3 + data.dates.length + i).width = 13;
 
   /* --- detail sheet: one row per worker per day --- */
   const detail = wb.addWorksheet("Daily Detail");
@@ -206,7 +227,7 @@ export function exportMatrixPdf(data: MatrixData) {
     x += 52;
   });
 
-  const head = [["#", "Worker", ...data.dates.map((d) => dayNum(d)), "P", "HD", "A", "Hrs", "OT"]];
+  const head = [["#", "Worker", ...data.dates.map((d) => dayNum(d)), "P", "SW", "HW", "Tot", "A", "Hrs", "OT"]];
   const body = data.rows.map((row, idx) => [
     idx + 1,
     row.name,
@@ -215,7 +236,9 @@ export function exportMatrixPdf(data: MatrixData) {
       return c ? STATUS_LABEL[c.status] : STATUS_LABEL.absent;
     }),
     row.presentDays,
-    row.halfDays,
+    row.sundayWorkedDays || 0,
+    row.holidayWorkedDays || 0,
+    row.totalDaysWorked || row.presentDays,
     row.absentDays,
     hoursToHM(row.totalHours),
     hoursToHM(row.totalOT),
@@ -246,7 +269,7 @@ export function exportMatrixPdf(data: MatrixData) {
   doc.setFontSize(8);
   doc.setTextColor(107, 114, 128);
   doc.text(
-    "Legend:  P = Present (>= 4.5 payable hrs)   HD = Half day (< 4.5 hrs)   A = Absent (no check-in)   IN = Missing check-out   S = Sunday",
+    "Legend: P = Workday Present   SW = Sunday Worked (OT)   HW = Holiday Worked (OT)   S = Sunday (Off)   H = Holiday (Off)   A = Absent (Workday)",
     12,
     Math.min(afterY + 6, doc.internal.pageSize.getHeight() - 8)
   );

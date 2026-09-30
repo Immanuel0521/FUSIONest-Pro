@@ -1,4 +1,4 @@
-import { Moon, Sun, User, LogOut, Menu, LayoutDashboard, Users, FolderKanban, FileBarChart, Shield, History, MapPin, BookOpen, ClipboardCheck, ClipboardList } from "lucide-react";
+import { Moon, Sun, User, LogOut, Menu, LayoutDashboard, Users, FolderKanban, FileBarChart, Shield, History, MapPin, BookOpen, ClipboardCheck, ClipboardList, Settings2, Crown, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useTheme } from "next-themes";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -19,40 +19,52 @@ import { useUserRole } from "@/hooks/useUserRole";
 import logo from "@/assets/fusionest-logo.png";
 import { CompanySwitcher } from "@/components/auth/CompanySwitcher";
 
-
 const allNavItems = [
-  { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard, roles: ["admin", "management", "supervisor"] },
-  { title: "Workforce", url: "/workforce", icon: Users, roles: ["admin", "management", "supervisor"] },
-  { title: "Projects", url: "/projects", icon: FolderKanban, roles: ["admin", "management", "supervisor"] },
-  { title: "Methodologies", url: "/methodologies", icon: BookOpen, roles: ["admin", "management", "supervisor"] },
-  { title: "Checklists", url: "/checklists", icon: ClipboardCheck, roles: ["admin", "management", "supervisor"] },
-  { title: "Site DPR", url: "/dpr", icon: ClipboardList, roles: ["admin", "management", "supervisor"] },
-  { title: "Reports", url: "/reports", icon: FileBarChart, roles: ["admin", "management"] },
-  { title: "Attendance History", url: "/attendance-history", icon: History, roles: ["admin", "management"] },
-  { title: "Work Allocation", url: "/work-allocation-history", icon: MapPin, roles: ["admin"] },
-  { title: "Admin", url: "/admin", icon: Shield, roles: ["admin"] },
+  { title: "Dashboard",           url: "/dashboard",       icon: LayoutDashboard, roles: ["admin", "management", "supervisor"] },
+  { title: "Workforce",           url: "/workforce",       icon: Users,           roles: ["admin", "management", "supervisor"] },
+  { title: "Projects & DPR",      url: "/projects",        icon: FolderKanban,    roles: ["admin", "management", "supervisor"] },
+  { title: "Execution Standards", url: "/stage-standards", icon: ShieldCheck,     roles: ["admin", "management", "supervisor"] },
+  { title: "Reports & Payroll",   url: "/reports",         icon: FileBarChart,    roles: ["admin", "management"] },
+  { title: "Admin",               url: "/admin",           icon: Shield,          roles: ["admin"] },
 ];
 
 export const Navbar = () => {
   const { theme, setTheme } = useTheme();
-  const navigate = useNavigate();
-  const { toast } = useToast();
-  const { role } = useUserRole();
-  const [userProfile, setUserProfile] = useState<{ full_name: string; photo_url: string | null } | null>(null);
+  const navigate             = useNavigate();
+  const { toast }            = useToast();
+  const { role }             = useUserRole();
+
+  const [userProfile,   setUserProfile]   = useState<{ full_name: string; photo_url: string | null } | null>(null);
+  const [mobileOpen,    setMobileOpen]    = useState(false);
+  const [isSuperAdmin,  setIsSuperAdmin]  = useState(false);
 
   const navItems = allNavItems.filter(item => role && item.roles.includes(role));
 
-  useEffect(() => {
-    loadUserProfile();
-  }, []);
-
-  const loadUserProfile = async () => {
+  // Single combined load — one DB query for profile + super-admin flag
+  const loadProfile = async () => {
     const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-      const { data } = await supabase.from('user_profiles').select('full_name, photo_url').eq('id', user.id).maybeSingle();
-      if (data) setUserProfile(data);
+    if (!user) return;
+    const { data } = await supabase
+      .from("user_profiles")
+      .select("full_name, photo_url, is_super_admin")
+      .eq("id", user.id)
+      .maybeSingle();
+    if (data) {
+      setUserProfile({ full_name: data.full_name, photo_url: data.photo_url });
+      setIsSuperAdmin(Boolean(data.is_super_admin));
     }
   };
+
+  useEffect(() => {
+    loadProfile();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
+      loadProfile();
+    });
+
+    return () => subscription.unsubscribe();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleLogout = async () => {
     const { error } = await supabase.auth.signOut();
@@ -63,13 +75,11 @@ export const Navbar = () => {
     }
   };
 
-  const [mobileOpen, setMobileOpen] = useState(false);
-
   const getRoleLabel = () => {
-    if (role === "admin") return "Admin";
+    if (role === "admin")      return "Admin";
     if (role === "management") return "Management";
     if (role === "supervisor") return "Supervisor";
-    if (role === "viewer") return "Viewer";
+    if (role === "viewer")     return "Viewer";
     return "User";
   };
 
@@ -80,7 +90,7 @@ export const Navbar = () => {
           {/* Mobile menu */}
           <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
             <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" aria-label="Open navigation menu" className="lg:hidden hover:bg-primary/10 w-9 h-9">
+              <Button variant="ghost" size="icon" aria-label="Open navigation menu" className="xl:hidden hover:bg-primary/10 w-9 h-9">
                 <Menu className="w-5 h-5" />
               </Button>
             </SheetTrigger>
@@ -125,28 +135,38 @@ export const Navbar = () => {
           </div>
         </div>
 
-
         {/* Desktop navigation */}
-        <nav className="hidden lg:flex items-center gap-0.5">
+        <nav className="hidden xl:flex items-center gap-0.5 overflow-x-auto no-scrollbar py-1">
           {navItems.map((item) => (
             <NavLink
               key={item.url}
               to={item.url}
               className={({ isActive }) =>
-                `flex items-center gap-2 px-3.5 py-2 rounded-xl text-sm font-medium transition-all ${
+                `flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium whitespace-nowrap transition-all ${
                   isActive
-                    ? "bg-primary/12 text-primary"
+                    ? "bg-primary/15 text-primary font-semibold"
                     : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
                 }`
               }
             >
-              <item.icon className="w-4 h-4" />
+              <item.icon className="w-3.5 h-3.5 shrink-0" />
               <span>{item.title}</span>
             </NavLink>
           ))}
         </nav>
 
         <div className="flex items-center gap-1.5">
+          {isSuperAdmin && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigate("/super-admin")}
+              className="h-8 rounded-xl px-2.5 gap-1.5 text-xs font-semibold bg-amber-500/10 border-amber-500/30 text-amber-600 dark:text-amber-400 hover:bg-amber-500/20"
+            >
+              <Crown className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Super Admin</span>
+            </Button>
+          )}
           <NotificationBell />
           <Button
             variant="ghost"
@@ -163,20 +183,42 @@ export const Navbar = () => {
               <Avatar className="w-9 h-9 border-2 border-primary/20 cursor-pointer hover:border-primary/50 transition-all ring-2 ring-background">
                 <AvatarImage src={userProfile?.photo_url || undefined} />
                 <AvatarFallback className="bg-primary/15 text-primary text-xs font-bold">
-                  {userProfile?.full_name?.split(' ').map(n => n[0]).join('').substring(0, 2) || 'U'}
+                  {userProfile?.full_name?.split(" ").map(n => n[0]).join("").substring(0, 2) || "U"}
                 </AvatarFallback>
               </Avatar>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56 glass-heavy rounded-2xl border-border/30 p-2">
               <div className="px-3 py-2">
-                <p className="text-sm font-semibold">{userProfile?.full_name || 'User'}</p>
+                <p className="text-sm font-semibold">{userProfile?.full_name || "User"}</p>
                 <p className="text-xs text-muted-foreground">{getRoleLabel()}</p>
               </div>
               <DropdownMenuSeparator className="bg-border/30" />
-              <DropdownMenuItem onClick={() => navigate('/profile')} className="cursor-pointer rounded-xl">
+
+              <DropdownMenuItem onClick={() => navigate("/profile")} className="cursor-pointer rounded-xl">
                 <User className="w-4 h-4 mr-2" />
                 Profile
               </DropdownMenuItem>
+
+              {role === "admin" && (
+                <DropdownMenuItem onClick={() => navigate("/company-settings")} className="cursor-pointer rounded-xl">
+                  <Settings2 className="w-4 h-4 mr-2" />
+                  Company Settings
+                </DropdownMenuItem>
+              )}
+
+              {isSuperAdmin && (
+                <>
+                  <DropdownMenuSeparator className="bg-border/30" />
+                  <DropdownMenuItem
+                    onClick={() => navigate("/super-admin")}
+                    className="cursor-pointer rounded-xl text-amber-600 focus:text-amber-600 focus:bg-amber-50 dark:focus:bg-amber-900/20"
+                  >
+                    <Crown className="w-4 h-4 mr-2" />
+                    Super Admin Panel
+                  </DropdownMenuItem>
+                </>
+              )}
+
               <DropdownMenuSeparator className="bg-border/30" />
               <DropdownMenuItem onClick={handleLogout} className="cursor-pointer text-destructive focus:text-destructive rounded-xl">
                 <LogOut className="w-4 h-4 mr-2" />

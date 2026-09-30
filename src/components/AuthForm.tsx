@@ -1,10 +1,11 @@
 import { useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabase";
+import { useCompanyContext } from "@/context/CompanyContext";
 import { Mail, Lock, ArrowRight, Loader2, User } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import heroBg from "@/assets/hero-bg.jpg";
@@ -13,6 +14,8 @@ import logo from "@/assets/fusionest-logo.png";
 export const AuthForm = () => {
   const [isLogin, setIsLogin] = useState(true);
   const [params] = useSearchParams();
+  const navigate = useNavigate();
+  const { refreshCompanies } = useCompanyContext();
   const { toast } = useToast();
 
   const [email, setEmail]       = useState("");
@@ -28,6 +31,11 @@ export const AuthForm = () => {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
         toast({ title: "Welcome back!", description: "Successfully signed in." });
+        await refreshCompanies();
+        const nextParam = params.get("next");
+        const safeNext  = nextParam?.startsWith("/") && !nextParam.startsWith("//") ? nextParam : null;
+        navigate(safeNext ?? "/dashboard", { replace: true });
+        return;
       } else {
         if (!fullName.trim()) {
           toast({ title: "Name required", description: "Please enter your full name.", variant: "destructive" });
