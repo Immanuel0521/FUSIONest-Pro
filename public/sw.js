@@ -1,5 +1,5 @@
-const STATIC_CACHE = "attendpro-static-v2";
-const DYNAMIC_CACHE = "attendpro-dynamic-v2";
+const STATIC_CACHE = "fusionest-static-v3";
+const DYNAMIC_CACHE = "fusionest-dynamic-v3";
 
 const STATIC_ASSETS = ["/", "/index.html"];
 
@@ -55,22 +55,12 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // Backend API calls - network first, cached fallback (cache only successful responses)
-  if (url.hostname.includes("supabase.co")) {
-    event.respondWith(
-      fetch(request)
-        .then((response) => {
-          if (response && response.ok) {
-            caches.open(DYNAMIC_CACHE).then((cache) => cache.put(request, response.clone()));
-          }
-          return response;
-        })
-        .catch(() => caches.match(request)),
-    );
+  // Backend API calls and external services: always bypass service worker caching to prevent data leakage
+  if (url.hostname.includes("supabase.co") || url.origin !== self.location.origin) {
     return;
   }
 
-  // Static assets: cache first, network fallback (cache only successful responses)
+  // Static assets from same origin: cache first, network fallback (cache only successful responses)
   event.respondWith(
     caches.match(request).then((cachedResponse) => {
       if (cachedResponse) return cachedResponse;

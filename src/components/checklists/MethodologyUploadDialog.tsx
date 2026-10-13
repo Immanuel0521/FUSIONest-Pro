@@ -24,6 +24,8 @@ export const MethodologyUploadDialog = ({ open, onOpenChange, onSaved }: Props) 
   const submit = async () => {
     if (!title.trim() || !file) { toast.error("Title and PDF file required"); return; }
     if (file.size > 10 * 1024 * 1024) { toast.error("File too large (max 10MB)"); return; }
+    const isPdf = file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
+    if (!isPdf) { toast.error("Invalid file format. Please upload a PDF document."); return; }
     setBusy(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();

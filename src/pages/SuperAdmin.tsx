@@ -32,7 +32,7 @@ import { Label } from "@/components/ui/label";
 import {
   Shield, Building2, Users, ArrowLeft, RefreshCw,
   CheckCircle2, Trash2, Search, Crown, Ban,
-  RotateCcw, Pencil, SlidersHorizontal, Save
+  RotateCcw, Pencil, SlidersHorizontal, Save, Loader2
 } from "lucide-react";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -265,6 +265,18 @@ export default function SuperAdmin() {
     suspended: companies.filter(c => !c.is_active).length,
     users:     users.length,
   };
+
+  // ── Verifying authorization ────────────────────────────────────────────────
+  if (isSuperAdmin === null) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          <p className="text-muted-foreground text-sm">Verifying super admin permissions...</p>
+        </div>
+      </div>
+    );
+  }
 
   // ── Not authorized ─────────────────────────────────────────────────────────
   if (isSuperAdmin === false) {

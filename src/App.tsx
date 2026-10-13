@@ -41,6 +41,8 @@ import CompanySettings from "./pages/CompanySettings";
 import SuperAdmin from "./pages/SuperAdmin";
 import AccessSuspended from "./pages/AccessSuspended";
 import StageQualityStandards from "./pages/StageQualityStandards";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
+import TermsOfService from "./pages/TermsOfService";
 
 const queryClient = new QueryClient();
 
@@ -52,9 +54,18 @@ const AnimatedRoutes = () => {
       <Routes location={location} key={location.pathname}>
         {/* ── Public routes ─────────────────────────────────────── */}
         <Route path="/" element={<PageTransition><Index /></PageTransition>} />
+        <Route path="/privacy" element={<PageTransition><PrivacyPolicy /></PageTransition>} />
+        <Route path="/terms" element={<PageTransition><TermsOfService /></PageTransition>} />
         <Route path="/attendance-scan" element={<PageTransition><PublicBiometricAttendance /></PageTransition>} />
         <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
-        <Route path="/super-admin" element={<PageTransition><SuperAdmin /></PageTransition>} />
+        <Route
+          path="/super-admin"
+          element={
+            <ProtectedRoute requireAuth skipCompanyCheck>
+              <PageTransition><SuperAdmin /></PageTransition>
+            </ProtectedRoute>
+          }
+        />
         <Route path="/access-suspended" element={<PageTransition><AccessSuspended /></PageTransition>} />
 
         {/* ── Onboarding (auth required, no company needed yet) ── */}

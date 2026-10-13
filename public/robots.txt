@@ -1,16 +1,21 @@
-User-agent: Googlebot
-Allow: /
-
-User-agent: Bingbot
-Allow: /
-
-User-agent: Twitterbot
-Allow: /
-
-User-agent: facebookexternalhit
-Allow: /
-
 User-agent: *
-Allow: /
+Allow: /$
+Allow: /privacy
+Allow: /terms
+Disallow: /admin
+Disallow: /super-admin
+Disallow: /dashboard
+Disallow: /workforce
+Disallow: /projects
+Disallow: /reports
+Disallow: /attendance-history
+Disallow: /attendance-scan
+Disallow: /my-attendance
+Disallow: /stage-standards
+Disallow: /methodologies
+Disallow: /checklists
+Disallow: /company-settings
+Disallow: /onboarding
+Disallow: /access-suspended
 
-Sitemap: https://fusionest-pro.lovable.app/sitemap.xml
+Sitemap: /sitemap.xml

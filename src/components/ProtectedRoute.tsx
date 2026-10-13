@@ -68,8 +68,8 @@ export const ProtectedRoute = ({
   }
 
   // Role check against company membership role
-  if (requireAuth && isAuthenticated && userRole && allowedRoles.length > 0) {
-    if (!allowedRoles.includes(userRole as UserRole)) {
+  if (requireAuth && isAuthenticated && !skipCompanyCheck && allowedRoles.length > 0) {
+    if (!userRole || !allowedRoles.includes(userRole as UserRole)) {
       return <Navigate to="/dashboard" replace />;
     }
   }

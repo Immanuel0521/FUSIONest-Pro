@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useSearchParams, useNavigate } from "react-router-dom";
+import { useSearchParams, useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -226,6 +226,13 @@ export const AuthForm = () => {
             </span>
           ))}
         </motion.div>
+
+        {/* Compliance & legal footer */}
+        <div className="flex items-center justify-center gap-3 text-[11px] text-white/40 mt-4 pb-2">
+          <Link to="/privacy" className="hover:text-white/80 transition-colors">Privacy Policy</Link>
+          <span>•</span>
+          <Link to="/terms" className="hover:text-white/80 transition-colors">Terms of Service</Link>
+        </div>
       </div>
     </div>
   );
