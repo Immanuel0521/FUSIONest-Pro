@@ -20,12 +20,13 @@ import logo from "@/assets/fusionest-logo.png";
 import { CompanySwitcher } from "@/components/auth/CompanySwitcher";
 
 const allNavItems = [
-  { title: "Dashboard",           url: "/dashboard",       icon: LayoutDashboard, roles: ["admin", "management", "supervisor"] },
-  { title: "Workforce",           url: "/workforce",       icon: Users,           roles: ["admin", "management", "supervisor"] },
-  { title: "Projects & DPR",      url: "/projects",        icon: FolderKanban,    roles: ["admin", "management", "supervisor"] },
-  { title: "Execution Standards", url: "/stage-standards", icon: ShieldCheck,     roles: ["admin", "management", "supervisor"] },
-  { title: "Reports & Payroll",   url: "/reports",         icon: FileBarChart,    roles: ["admin", "management"] },
-  { title: "Admin",               url: "/admin",           icon: Shield,          roles: ["admin"] },
+  { title: "Dashboard",           url: "/dashboard",          icon: LayoutDashboard, roles: ["admin", "management", "supervisor"] },
+  { title: "Workforce",           url: "/workforce",          icon: Users,           roles: ["admin", "management", "supervisor"] },
+  { title: "Attendance History",  url: "/attendance-history", icon: History,         roles: ["admin", "management", "supervisor"] },
+  { title: "Projects & DPR",      url: "/projects",           icon: FolderKanban,    roles: ["admin", "management", "supervisor"] },
+  { title: "Execution Standards", url: "/stage-standards",    icon: ShieldCheck,     roles: ["admin", "management", "supervisor"] },
+  { title: "Reports & Payroll",   url: "/reports",            icon: FileBarChart,    roles: ["admin", "management"] },
+  { title: "Admin",               url: "/admin",              icon: Shield,          roles: ["admin"] },
 ];
 
 export const Navbar = () => {

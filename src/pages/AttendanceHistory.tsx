@@ -38,7 +38,7 @@ interface AttendanceRecord {
   };
 }
 
-export default function AttendanceHistory() {
+export default function AttendanceHistory({ embedded }: { embedded?: boolean } = {}) {
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
   const [selectedDate, setSelectedDate] = useState(() => {
     const now = new Date();
@@ -189,23 +189,22 @@ export default function AttendanceHistory() {
     });
   };
 
-  return (
-    <DashboardLayout>
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-              Attendance History &amp; Edit
-            </h1>
-            <p className="text-muted-foreground mt-1">
-              View, edit, add, and delete past attendance records
-            </p>
-          </div>
-          <Button onClick={() => setShowPastDialog(true)}>
-            <Plus className="w-4 h-4 mr-1" />
-            Add Past Attendance
-          </Button>
+  const content = (
+    <div className="space-y-6">
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+            Attendance History &amp; Edit
+          </h1>
+          <p className="text-muted-foreground mt-1 text-sm">
+            View, edit, add, and delete past attendance records or mark group attendance
+          </p>
         </div>
+        <Button onClick={() => setShowPastDialog(true)} className="gap-2 shadow-sm">
+          <Plus className="w-4 h-4" />
+          Add Past Attendance
+        </Button>
+      </div>
 
         {/* Filters */}
         <Card className="p-4">
@@ -494,6 +493,15 @@ export default function AttendanceHistory() {
           </AlertDialogContent>
         </AlertDialog>
       </div>
+  );
+
+  if (embedded) {
+    return content;
+  }
+
+  return (
+    <DashboardLayout>
+      {content}
     </DashboardLayout>
   );
 }

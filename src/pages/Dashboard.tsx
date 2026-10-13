@@ -150,7 +150,7 @@ function DefaultDashboard() {
         >
           <div className="glass-heavy rounded-3xl p-6 sm:p-8 relative overflow-hidden">
             {/* Decorative background elements */}
-            <div className="absolute top-0 right-0 w-40 h-40 bg-primary/8 rounded-full blur-3xl" />
+            <div className="absolute top-0 right-0 w-40 h-40 bg-primary/10 rounded-full blur-3xl" />
             <div className="absolute bottom-0 left-0 w-32 h-32 bg-accent/8 rounded-full blur-3xl" />
             
             <div className="relative">

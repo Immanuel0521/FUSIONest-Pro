@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Users, ClipboardCheck, Fingerprint, MapPin } from "lucide-react";
+import { Users, ClipboardCheck, Fingerprint, MapPin, History } from "lucide-react";
 import { motion } from "framer-motion";
 import Workers from "./Workers";
 import Attendance from "./Attendance";
+import AttendanceHistory from "./AttendanceHistory";
 import BiometricAttendance from "./BiometricAttendance";
 import WorkAllocationHistory from "./WorkAllocationHistory";
 
@@ -45,7 +46,14 @@ export default function Workforce() {
               className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-accent data-[state=active]:text-white transition-all px-5 py-2 text-sm font-medium gap-2"
             >
               <ClipboardCheck className="w-4 h-4" />
-              Attendance
+              Live Attendance
+            </TabsTrigger>
+            <TabsTrigger 
+              value="history"
+              className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-accent data-[state=active]:text-white transition-all px-5 py-2 text-sm font-medium gap-2"
+            >
+              <History className="w-4 h-4" />
+              Attendance History &amp; Groups
             </TabsTrigger>
             <TabsTrigger 
               value="biometric"
@@ -80,6 +88,16 @@ export default function Workforce() {
               transition={{ duration: 0.3 }}
             >
               <Attendance embedded />
+            </motion.div>
+          </TabsContent>
+
+          <TabsContent value="history" className="mt-6">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3 }}
+            >
+              <AttendanceHistory embedded />
             </motion.div>
           </TabsContent>
 

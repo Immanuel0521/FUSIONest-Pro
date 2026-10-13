@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo } from "react";
+import { Link } from "react-router-dom";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -8,8 +9,9 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabase";
 import { unifiedCheckIn, unifiedCheckOut } from "@/lib/attendanceService";
-import { Clock, LogIn, LogOut, Search, User } from "lucide-react";
+import { Clock, LogIn, LogOut, Search, User, Plus, History } from "lucide-react";
 import { DailyWorkNotes } from "@/components/DailyWorkNotes";
+import { PastAttendanceDialog } from "@/components/attendance/PastAttendanceDialog";
 
 interface Worker {
   id: string;
@@ -73,6 +75,7 @@ export default function Attendance({ embedded = false }: AttendanceProps) {
   const [workers, setWorkers] = useState<WorkerWithAttendance[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
+  const [showPastDialog, setShowPastDialog] = useState(false);
   const { toast } = useToast();
 
   const loadWorkersWithAttendance = async () => {
@@ -266,18 +269,32 @@ export default function Attendance({ embedded = false }: AttendanceProps) {
         </div>
       )}
 
-        {/* Search Bar */}
-        <Card className="glass-card p-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input
-              placeholder="Search worker by name..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 glass-card border-primary/20"
-            />
+        {/* Search Bar & Quick Actions */}
+        <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
+          <Card className="glass-card p-3 flex-1">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                placeholder="Search worker by name..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 glass-card border-primary/20"
+              />
+            </div>
+          </Card>
+          <div className="flex gap-2">
+            <Button onClick={() => setShowPastDialog(true)} className="gap-2 shadow-sm whitespace-nowrap">
+              <Plus className="w-4 h-4" />
+              Past / Group Attendance
+            </Button>
+            <Button variant="outline" asChild className="gap-2 whitespace-nowrap">
+              <Link to="/attendance-history">
+                <History className="w-4 h-4 text-primary" />
+                History &amp; Edit
+              </Link>
+            </Button>
           </div>
-        </Card>
+        </div>
 
         {/* Workers List */}
         <Card className="glass-card p-4">
@@ -420,6 +437,14 @@ export default function Attendance({ embedded = false }: AttendanceProps) {
         {/* Daily Work Notes Section */}
         <DailyWorkNotes 
           workers={workers.map(w => ({ id: w.id, full_name: w.full_name }))} 
+        />
+
+        {/* Group & Past Attendance Dialog */}
+        <PastAttendanceDialog
+          open={showPastDialog}
+          onOpenChange={setShowPastDialog}
+          defaultDate={new Date().toISOString().split('T')[0]}
+          onSaved={loadWorkersWithAttendance}
         />
       </div>
     );

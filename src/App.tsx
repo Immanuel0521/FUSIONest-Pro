@@ -159,7 +159,7 @@ const AnimatedRoutes = () => {
           </ProtectedRoute>
         } />
         <Route path="/attendance-history" element={
-          <ProtectedRoute allowedRoles={["admin", "management"]}>
+          <ProtectedRoute allowedRoles={["admin", "management", "supervisor"]}>
             <PageTransition><AttendanceHistory /></PageTransition>
           </ProtectedRoute>
         } />

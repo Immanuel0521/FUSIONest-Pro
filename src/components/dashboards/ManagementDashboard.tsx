@@ -125,7 +125,7 @@ export default function ManagementDashboard() {
           transition={{ duration: 0.5 }}
         >
           <div className="glass-heavy rounded-3xl p-6 sm:p-8 relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-40 h-40 bg-primary/8 rounded-full blur-3xl" />
+            <div className="absolute top-0 right-0 w-40 h-40 bg-primary/10 rounded-full blur-3xl" />
             <div className="relative">
               <p className="text-muted-foreground text-sm font-medium">
                 {format(new Date(), "EEEE, MMMM d")}
