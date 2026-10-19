@@ -230,7 +230,10 @@ export function FaceRegistration() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
 
-      await supabase.from('face_embeddings').delete().eq('worker_id', selectedWorker.id);
+      const { error: delError } = await supabase.from('face_embeddings').delete().eq('worker_id', selectedWorker.id);
+      if (delError) {
+        console.warn('Face embeddings delete warning:', delError);
+      }
 
       for (const capture of captures) {
         let photoUrl = null;
@@ -243,18 +246,83 @@ export function FaceRegistration() {
           if (!uploadError) {
             const { data: urlData } = supabase.storage.from('worker-photos').getPublicUrl(fileName);
             photoUrl = urlData.publicUrl;
+          } else {
+            console.warn('Photo upload warning:', uploadError);
           }
         }
 
-        await supabase.from('face_embeddings').insert({
-          worker_id: selectedWorker.id,
-          embedding_data: capture.descriptor,
-          photo_url: photoUrl,
-          quality_score: Math.round(capture.confidence),
-          created_by: user.id,
-          angle: capture.angle,
-        });
+        // Try atomic RPC first (bypasses RLS mismatch safely via SECURITY DEFINER)
+        let saved = false;
+        try {
+          const { error: rpcError } = await (supabase.rpc as any)('register_worker_face_embedding', {
+            p_worker_id: selectedWorker.id,
+            p_embedding_data: capture.descriptor,
+            p_photo_url: photoUrl,
+            p_quality_score: Math.round(capture.confidence),
+            p_angle: capture.angle,
+          });
+          if (!rpcError) {
+            saved = true;
+          } else {
+            console.warn('RPC register_worker_face_embedding not available or errored:', rpcError.message);
+          }
+        } catch (rpcEx) {
+          console.warn('RPC register_worker_face_embedding exception:', rpcEx);
+        }
+
+        if (!saved) {
+          // Fallback 1: Direct upsert on (worker_id, angle)
+          const { error: upsertError } = await supabase.from('face_embeddings').upsert({
+            worker_id: selectedWorker.id,
+            embedding_data: capture.descriptor,
+            photo_url: photoUrl,
+            quality_score: Math.round(capture.confidence),
+            created_by: user.id,
+            angle: capture.angle,
+          }, { onConflict: 'worker_id,angle' });
+
+          if (!upsertError) {
+            saved = true;
+          } else {
+            // Fallback 2: Direct upsert on worker_id (legacy single-angle schema)
+            const { error: legacyUpsertError } = await supabase.from('face_embeddings').upsert({
+              worker_id: selectedWorker.id,
+              embedding_data: capture.descriptor,
+              photo_url: photoUrl,
+              quality_score: Math.round(capture.confidence),
+              created_by: user.id,
+              angle: capture.angle,
+            }, { onConflict: 'worker_id' });
+
+            if (!legacyUpsertError) {
+              saved = true;
+            } else {
+              // Fallback 3: Direct insert
+              const { error: insertError } = await supabase.from('face_embeddings').insert({
+                worker_id: selectedWorker.id,
+                embedding_data: capture.descriptor,
+                photo_url: photoUrl,
+                quality_score: Math.round(capture.confidence),
+                created_by: user.id,
+                angle: capture.angle,
+              });
+
+              if (!insertError) {
+                saved = true;
+              } else {
+                const isRlsError = insertError.message?.toLowerCase().includes('violates row-level security') ||
+                                   upsertError.message?.toLowerCase().includes('violates row-level security');
+                if (isRlsError) {
+                  throw new Error('Database permission error (RLS). Please execute migration 20261019140000_fix_face_embeddings_multitenant_rls.sql in your Supabase SQL Editor.');
+                }
+                throw new Error(insertError.message || legacyUpsertError.message || upsertError.message || 'Failed to save face embedding');
+              }
+            }
+          }
+        }
       }
+
+      await loadData();
 
       toast({
         title: '🎉 Face Registration Complete!',
@@ -262,6 +330,7 @@ export function FaceRegistration() {
       });
     } catch (err: any) {
       toast({ variant: 'destructive', title: 'Registration Failed', description: err.message });
+      throw err;
     } finally {
       setRegistering(false);
     }
@@ -276,7 +345,10 @@ export function FaceRegistration() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
 
-      await supabase.from('face_embeddings').delete().eq('worker_id', selectedWorker.id);
+      const { error: delError } = await supabase.from('face_embeddings').delete().eq('worker_id', selectedWorker.id);
+      if (delError) {
+        console.warn('Face embeddings delete warning:', delError);
+      }
 
       const img = new Image();
       const imageUrl = URL.createObjectURL(file);
@@ -301,20 +373,84 @@ export function FaceRegistration() {
         photoUrl = urlData.publicUrl;
       }
 
-      await supabase.from('face_embeddings').insert({
-        worker_id: selectedWorker.id,
-        embedding_data: Array.from(faceData.descriptor),
-        photo_url: photoUrl,
-        quality_score: Math.round(faceData.detection.score * 100),
-        created_by: user.id,
-        angle: 'front',
-      });
+      const qualityScore = Math.round(faceData.detection.score * 100);
+      const descriptorArray = Array.from(faceData.descriptor);
+
+      // Try RPC first
+      let saved = false;
+      try {
+        const { error: rpcError } = await (supabase.rpc as any)('register_worker_face_embedding', {
+          p_worker_id: selectedWorker.id,
+          p_embedding_data: descriptorArray,
+          p_photo_url: photoUrl,
+          p_quality_score: qualityScore,
+          p_angle: 'front',
+        });
+        if (!rpcError) {
+          saved = true;
+        } else {
+          console.warn('RPC register_worker_face_embedding not available or errored:', rpcError.message);
+        }
+      } catch (rpcEx) {
+        console.warn('RPC register_worker_face_embedding exception:', rpcEx);
+      }
+
+      if (!saved) {
+        // Fallback 1: Direct upsert on (worker_id, angle)
+        const { error: upsertError } = await supabase.from('face_embeddings').upsert({
+          worker_id: selectedWorker.id,
+          embedding_data: descriptorArray,
+          photo_url: photoUrl,
+          quality_score: qualityScore,
+          created_by: user.id,
+          angle: 'front',
+        }, { onConflict: 'worker_id,angle' });
+
+        if (!upsertError) {
+          saved = true;
+        } else {
+          // Fallback 2: Direct upsert on worker_id (legacy single-angle)
+          const { error: legacyUpsertError } = await supabase.from('face_embeddings').upsert({
+            worker_id: selectedWorker.id,
+            embedding_data: descriptorArray,
+            photo_url: photoUrl,
+            quality_score: qualityScore,
+            created_by: user.id,
+            angle: 'front',
+          }, { onConflict: 'worker_id' });
+
+          if (!legacyUpsertError) {
+            saved = true;
+          } else {
+            // Fallback 3: Direct insert
+            const { error: insertError } = await supabase.from('face_embeddings').insert({
+              worker_id: selectedWorker.id,
+              embedding_data: descriptorArray,
+              photo_url: photoUrl,
+              quality_score: qualityScore,
+              created_by: user.id,
+              angle: 'front',
+            });
+
+            if (!insertError) {
+              saved = true;
+            } else {
+              const isRlsError = insertError.message?.toLowerCase().includes('violates row-level security') ||
+                                 upsertError.message?.toLowerCase().includes('violates row-level security');
+              if (isRlsError) {
+                throw new Error('Database permission error (RLS). Please execute migration 20261019140000_fix_face_embeddings_multitenant_rls.sql in your Supabase SQL Editor.');
+              }
+              throw new Error(insertError.message || legacyUpsertError.message || upsertError.message || 'Failed to save face embedding');
+            }
+          }
+        }
+      }
 
       toast({
         title: 'Face Registered from Photo!',
-        description: `Camera registration recommended for better accuracy.`,
+        description: `Camera multi-angle registration is recommended for higher accuracy.`,
       });
-      loadData();
+      await loadData();
       setSelectedWorker(null);
     } catch (err: any) {
       toast({ variant: 'destructive', title: 'Registration Failed', description: err.message });

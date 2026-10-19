@@ -34,6 +34,7 @@ export interface MatrixData {
   workingDaysCount?: number;
   sundaysCount?: number;
   holidaysCount?: number;
+  companyName?: string;
 }
 
 const dayNum = (d: string) => String(Number(d.split("-")[2]));
@@ -43,7 +44,7 @@ const weekday = (d: string) =>
 /* ------------------------------- EXCEL ---------------------------------- */
 export async function exportMatrixExcel(data: MatrixData) {
   const wb = new ExcelJS.Workbook();
-  wb.creator = "FUSIONest Pro";
+  wb.creator = data.companyName || "Workforce SaaS";
 
   const ws = wb.addWorksheet("Attendance Matrix", {
     views: [{ state: "frozen", xSplit: 2, ySplit: 3 }],
@@ -191,7 +192,7 @@ export function exportMatrixPdf(data: MatrixData) {
   doc.rect(0, 0, pageWidth, 20, "F");
   doc.setTextColor(255, 255, 255);
   doc.setFontSize(14);
-  doc.text("FUSIONest Pro — Full Attendance Report", 12, 9);
+  doc.text(`${data.companyName || "Workforce"} — Full Attendance Report`, 12, 9);
   doc.setFontSize(10);
   doc.text(data.monthLabel, 12, 16);
 

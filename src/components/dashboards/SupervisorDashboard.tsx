@@ -151,7 +151,7 @@ export default function SupervisorDashboard() {
                 Field Operations & Site Execution
               </h1>
               <p className="text-sm text-muted-foreground mt-1">
-                Company: <span className="font-semibold text-foreground">{activeCompany?.name || "FUSIONest Pro"}</span> • Direct oversight of ground crew, checklists & daily DPRs
+                Company: <span className="font-semibold text-foreground">{activeCompany?.name || "Company Workspace"}</span> • Direct oversight of ground crew, checklists & daily DPRs
               </p>
             </div>
 

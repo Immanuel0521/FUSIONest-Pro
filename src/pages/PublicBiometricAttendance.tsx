@@ -5,13 +5,14 @@ import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { useTheme } from "next-themes";
-import { Moon, Sun } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useCompanyContext } from "@/context/CompanyContext";
 
 export default function PublicBiometricAttendance() {
   const [lastMarkedId, setLastMarkedId] = useState<string | null>(null);
   const { theme, setTheme } = useTheme();
   const { toast } = useToast();
+  const { activeCompany } = useCompanyContext();
   const [copied, setCopied] = useState(false);
 
   const handleAttendanceMarked = (workerId: string, type: 'in' | 'out') => {
@@ -46,7 +47,7 @@ export default function PublicBiometricAttendance() {
               </Button>
             </Link>
             <h2 className="text-xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-              FUSIONest Pro
+              {activeCompany?.name ? `${activeCompany.name} Attendance` : "Biometric Attendance"}
             </h2>
           </div>
           

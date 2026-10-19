@@ -16,13 +16,13 @@ import { useState, useEffect } from "react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { NotificationBell } from "@/components/NotificationBell";
 import { useUserRole } from "@/hooks/useUserRole";
+import { useCompanyContext } from "@/context/CompanyContext";
 import logo from "@/assets/fusionest-logo.png";
 import { CompanySwitcher } from "@/components/auth/CompanySwitcher";
 
 const allNavItems = [
   { title: "Dashboard",           url: "/dashboard",          icon: LayoutDashboard, roles: ["admin", "management", "supervisor"] },
   { title: "Workforce",           url: "/workforce",          icon: Users,           roles: ["admin", "management", "supervisor"] },
-  { title: "Attendance History",  url: "/attendance-history", icon: History,         roles: ["admin", "management", "supervisor"] },
   { title: "Projects & DPR",      url: "/projects",           icon: FolderKanban,    roles: ["admin", "management", "supervisor"] },
   { title: "Execution Standards", url: "/stage-standards",    icon: ShieldCheck,     roles: ["admin", "management", "supervisor"] },
   { title: "Reports & Payroll",   url: "/reports",            icon: FileBarChart,    roles: ["admin", "management"] },
@@ -34,6 +34,12 @@ export const Navbar = () => {
   const navigate             = useNavigate();
   const { toast }            = useToast();
   const { role }             = useUserRole();
+  const { activeCompany }    = useCompanyContext();
+
+  const isFusionestCompany = Boolean(
+    activeCompany &&
+    activeCompany.name.toLowerCase().includes("fusionest")
+  );
 
   const [userProfile,   setUserProfile]   = useState<{ full_name: string; photo_url: string | null } | null>(null);
   const [mobileOpen,    setMobileOpen]    = useState(false);
@@ -97,8 +103,25 @@ export const Navbar = () => {
             </SheetTrigger>
             <SheetContent side="left" className="w-72 glass-heavy border-r-0">
               <div className="flex items-center gap-3 mb-8 mt-2">
-                <img src={logo} alt="FUSIONest" className="w-8 h-8 rounded-lg object-contain" />
-                <span className="font-bold text-lg" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>FUSIONest Pro</span>
+                {isFusionestCompany ? (
+                  <>
+                    <img src={logo} alt="FUSIONest" className="w-8 h-8 rounded-lg object-contain" />
+                    <span className="font-bold text-lg" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>FUSIONest Pro</span>
+                  </>
+                ) : (
+                  <>
+                    {activeCompany?.logo_url ? (
+                      <img src={activeCompany.logo_url} alt={activeCompany.name} className="w-8 h-8 rounded-lg object-cover border border-primary/20 shrink-0" />
+                    ) : (
+                      <div className="w-8 h-8 rounded-lg bg-primary/15 text-primary border border-primary/30 flex items-center justify-center font-bold text-xs uppercase shrink-0 shadow-sm">
+                        {activeCompany?.name ? activeCompany.name.slice(0, 2) : "CO"}
+                      </div>
+                    )}
+                    <span className="font-bold text-lg truncate max-w-[180px]" style={{ fontFamily: "'Space Grotesk', sans-serif" }} title={activeCompany?.name}>
+                      {activeCompany?.name || "Workspace"}
+                    </span>
+                  </>
+                )}
               </div>
               <nav className="flex flex-col gap-1">
                 {navItems.map((item) => (
@@ -122,12 +145,38 @@ export const Navbar = () => {
             </SheetContent>
           </Sheet>
 
+          {/* Dynamic Company Branding on Desktop */}
           <div className="flex items-center gap-2.5">
-            <img src={logo} alt="FUSIONest" className="w-7 h-7 rounded-lg object-contain hidden sm:block" />
-            <h2 className="text-lg font-bold tracking-tight" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
-              <span className="text-primary">FUSION</span>
-              <span className="text-foreground">est</span>
-            </h2>
+            {isFusionestCompany ? (
+              <>
+                <img src={logo} alt="FUSIONest" className="w-8 h-8 rounded-lg object-contain hidden sm:block" />
+                <h2 className="text-lg font-bold tracking-tight hidden sm:block" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                  <span className="text-primary">FUSION</span>
+                  <span className="text-foreground">est</span>
+                </h2>
+              </>
+            ) : (
+              <>
+                {activeCompany?.logo_url ? (
+                  <img
+                    src={activeCompany.logo_url}
+                    alt={activeCompany.name}
+                    className="w-8 h-8 rounded-lg object-cover border border-primary/20 shrink-0 hidden sm:block shadow-sm"
+                  />
+                ) : (
+                  <div className="w-8 h-8 rounded-lg bg-primary/15 text-primary border border-primary/30 hidden sm:flex items-center justify-center font-bold text-xs uppercase shrink-0 shadow-sm">
+                    {activeCompany?.name ? activeCompany.name.slice(0, 2) : "CO"}
+                  </div>
+                )}
+                <h2
+                  className="text-lg font-bold tracking-tight max-w-[170px] sm:max-w-[210px] truncate hidden sm:block"
+                  style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+                  title={activeCompany?.name}
+                >
+                  {activeCompany?.name || "Company"}
+                </h2>
+              </>
+            )}
           </div>
 
           {/* Company switcher */}

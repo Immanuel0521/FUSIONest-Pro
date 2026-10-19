@@ -1,6 +1,7 @@
 import { ReactNode } from "react";
 import { Navbar } from "@/components/Navbar";
 import { BottomNav } from "@/components/BottomNav";
+import { Footer } from "@/components/Footer";
 import heroBg from "@/assets/hero-bg.jpg";
 
 interface DashboardLayoutProps {
@@ -9,7 +10,7 @@ interface DashboardLayoutProps {
 
 export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
   return (
-    <div className="min-h-screen w-full relative overflow-hidden">
+    <div className="min-h-screen w-full relative overflow-hidden flex flex-col">
       {/* Atmospheric background image */}
       <div className="fixed inset-0">
         <img
@@ -27,9 +28,12 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
       </div>
 
       {/* Main content area */}
-      <main className="relative z-10 max-w-7xl mx-auto p-4 md:p-8 pb-24 lg:pb-8">
+      <main className="relative z-10 max-w-7xl mx-auto p-4 md:p-8 pb-12 lg:pb-8 flex-1 w-full">
         {children}
       </main>
+
+      {/* Global Footer */}
+      <Footer />
 
       {/* Mobile bottom navigation */}
       <BottomNav />

@@ -9,9 +9,10 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabase";
 import { unifiedCheckIn, unifiedCheckOut } from "@/lib/attendanceService";
-import { Clock, LogIn, LogOut, Search, User, Plus, History } from "lucide-react";
+import { Clock, LogIn, LogOut, Search, User, Plus, History, Users, CheckCheck, Loader2, Sparkles, Filter, CheckCircle2 } from "lucide-react";
 import { DailyWorkNotes } from "@/components/DailyWorkNotes";
 import { PastAttendanceDialog } from "@/components/attendance/PastAttendanceDialog";
+import { useAttendanceGroups, groupChip } from "@/hooks/useAttendanceGroups";
 
 interface Worker {
   id: string;
@@ -76,6 +77,12 @@ export default function Attendance({ embedded = false }: AttendanceProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
   const [showPastDialog, setShowPastDialog] = useState(false);
+  const { groups, loading: groupsLoading } = useAttendanceGroups();
+  const [selectedGroupIds, setSelectedGroupIds] = useState<string[]>([]);
+  const [statusFilter, setStatusFilter] = useState<'all' | 'present' | 'absent' | 'completed'>('all');
+  const [groupBulkInTime, setGroupBulkInTime] = useState<string>("09:00");
+  const [groupBulkOutTime, setGroupBulkOutTime] = useState<string>("18:00");
+  const [groupProcessing, setGroupProcessing] = useState<boolean>(false);
   const { toast } = useToast();
 
   const loadWorkersWithAttendance = async () => {
@@ -225,15 +232,189 @@ export default function Attendance({ embedded = false }: AttendanceProps) {
     }
   };
 
-  // Fuzzy search with matching workers at top
+  // Multi-Group selection helpers
+  const toggleGroupSelection = (groupId: string) => {
+    setSelectedGroupIds(prev =>
+      prev.includes(groupId) ? prev.filter(id => id !== groupId) : [...prev, groupId]
+    );
+  };
+
+  const clearGroupSelection = () => {
+    setSelectedGroupIds([]);
+  };
+
+  const selectAllGroups = () => {
+    setSelectedGroupIds(groups.map(g => g.id));
+  };
+
+  // Active selected groups objects
+  const activeSelectedGroups = useMemo(() => {
+    if (selectedGroupIds.length === 0) return [];
+    return groups.filter(g => selectedGroupIds.includes(g.id));
+  }, [groups, selectedGroupIds]);
+
+  // Set of worker IDs belonging to ANY of the selected groups
+  const groupMemberWorkerIds = useMemo(() => {
+    if (selectedGroupIds.length === 0) return null;
+    const ids = new Set<string>();
+    activeSelectedGroups.forEach(g => {
+      g.members.forEach(m => ids.add(m.id));
+    });
+    return ids;
+  }, [selectedGroupIds, activeSelectedGroups]);
+
+  // 1. Filter workers by group selection
+  const groupFilteredWorkers = useMemo(() => {
+    if (!groupMemberWorkerIds) return workers;
+    return workers.filter(w => groupMemberWorkerIds.has(w.id));
+  }, [workers, groupMemberWorkerIds]);
+
+  // Aggregate stats computed on current group selection (for status badges & counters)
+  const statusCounts = useMemo(() => {
+    const list = groupFilteredWorkers;
+    const total = list.length;
+    const present = list.filter(w => !!w.attendance).length;
+    const absent = list.filter(w => !w.attendance).length;
+    const checkedOut = list.filter(w => !!w.attendance?.time_out).length;
+    const pendingOut = list.filter(w => w.attendance && !w.attendance.time_out).length;
+    return { total, present, absent, checkedOut, pendingOut };
+  }, [groupFilteredWorkers]);
+
+  // 2. Filter workers by status filter ('all' | 'present' | 'absent' | 'completed')
+  const statusFilteredWorkers = useMemo(() => {
+    switch (statusFilter) {
+      case 'present':
+        return groupFilteredWorkers.filter(w => !!w.attendance);
+      case 'absent':
+        return groupFilteredWorkers.filter(w => !w.attendance);
+      case 'completed':
+        return groupFilteredWorkers.filter(w => !!w.attendance?.time_out);
+      case 'all':
+      default:
+        return groupFilteredWorkers;
+    }
+  }, [groupFilteredWorkers, statusFilter]);
+
+  // Bulk Check-In: checks in all un-checked-in workers in the current group scope
+  const handleBulkCheckIn = async () => {
+    const targetWorkers = groupFilteredWorkers.filter(w => !w.attendance);
+    if (targetWorkers.length === 0) {
+      toast({
+        title: "All Workers Checked In",
+        description: "There are no pending absentees to check in for this selection.",
+      });
+      return;
+    }
+
+    setGroupProcessing(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      const [hours, minutes] = groupBulkInTime.split(':').map(Number);
+      const timeIn = new Date();
+      timeIn.setHours(hours, minutes, 0, 0);
+
+      let successCount = 0;
+      let errorCount = 0;
+
+      for (const worker of targetWorkers) {
+        try {
+          const res = await unifiedCheckIn({
+            workerId: worker.id,
+            supervisorId: user.id,
+            source: 'manual',
+            recordedBy: 'supervisor',
+            timeIn,
+          });
+          if (res.status === 'success') {
+            successCount++;
+          }
+        } catch {
+          errorCount++;
+        }
+      }
+
+      await loadWorkersWithAttendance();
+
+      toast({
+        title: "Bulk Check-In Complete",
+        description: `Checked in ${successCount} worker(s) at ${groupBulkInTime}${errorCount > 0 ? ` (${errorCount} failed)` : ''}`,
+      });
+    } catch (err: any) {
+      toast({
+        variant: "destructive",
+        title: "Bulk Check-In Failed",
+        description: err.message,
+      });
+    } finally {
+      setGroupProcessing(false);
+    }
+  };
+
+  // Bulk Check-Out: checks out all checked-in workers in the current group scope
+  const handleBulkCheckOut = async () => {
+    const targetWorkers = groupFilteredWorkers.filter(w => w.attendance && !w.attendance.time_out);
+    if (targetWorkers.length === 0) {
+      toast({
+        title: "No Workers to Check Out",
+        description: "All checked-in workers in this selection have already checked out.",
+      });
+      return;
+    }
+
+    setGroupProcessing(true);
+    try {
+      const [hours, minutes] = groupBulkOutTime.split(':').map(Number);
+      const timeOut = new Date();
+      timeOut.setHours(hours, minutes, 0, 0);
+
+      let successCount = 0;
+      let errorCount = 0;
+
+      for (const worker of targetWorkers) {
+        try {
+          const res = await unifiedCheckOut({
+            workerId: worker.id,
+            source: 'manual',
+            recordedBy: 'supervisor',
+            timeOut,
+          });
+          if (res.status === 'success') {
+            successCount++;
+          }
+        } catch {
+          errorCount++;
+        }
+      }
+
+      await loadWorkersWithAttendance();
+
+      toast({
+        title: "Bulk Check-Out Complete",
+        description: `Checked out ${successCount} worker(s) at ${groupBulkOutTime}${errorCount > 0 ? ` (${errorCount} failed)` : ''}`,
+      });
+    } catch (err: any) {
+      toast({
+        variant: "destructive",
+        title: "Bulk Check-Out Failed",
+        description: err.message,
+      });
+    } finally {
+      setGroupProcessing(false);
+    }
+  };
+
+  // 3. Fuzzy search with matching workers at top
   const sortedWorkers = useMemo(() => {
-    if (!searchTerm.trim()) return workers;
+    const baseList = statusFilteredWorkers;
+    if (!searchTerm.trim()) return baseList;
 
     const term = searchTerm.toLowerCase();
     const matching: WorkerWithAttendance[] = [];
     const nonMatching: WorkerWithAttendance[] = [];
 
-    workers.forEach(worker => {
+    baseList.forEach(worker => {
       if (worker.full_name.toLowerCase().includes(term)) {
         matching.push(worker);
       } else {
@@ -242,7 +423,7 @@ export default function Attendance({ embedded = false }: AttendanceProps) {
     });
 
     return [...matching, ...nonMatching];
-  }, [workers, searchTerm]);
+  }, [statusFilteredWorkers, searchTerm]);
 
   const formatTime = (isoString: string) => {
     return new Date(isoString).toLocaleTimeString('en-US', { 
@@ -296,13 +477,237 @@ export default function Attendance({ embedded = false }: AttendanceProps) {
           </div>
         </div>
 
+        {/* Group Selector & Multi-Filter Chips */}
+        {groups.length > 0 && (
+          <div className="space-y-3">
+            <div className="flex items-center justify-between text-xs text-muted-foreground px-1 flex-wrap gap-2">
+              <span className="flex items-center gap-1.5 font-medium">
+                <Users className="w-3.5 h-3.5 text-primary" /> Filter by Attendance Group:
+                {selectedGroupIds.length > 0 && (
+                  <Badge variant="outline" className="text-[10px] py-0 px-2 bg-primary/10 text-primary border-primary/20">
+                    {selectedGroupIds.length} of {groups.length} Selected
+                  </Badge>
+                )}
+              </span>
+
+              <div className="flex items-center gap-3">
+                {selectedGroupIds.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={clearGroupSelection}
+                    className="text-xs text-muted-foreground hover:text-foreground font-medium underline"
+                  >
+                    Clear Filter
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={selectAllGroups}
+                  className="text-xs text-primary hover:underline font-medium"
+                >
+                  Select All Groups
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowPastDialog(true)}
+                  className="text-xs text-primary hover:underline font-medium flex items-center gap-1"
+                >
+                  Manage Groups <Plus className="w-3 h-3" />
+                </button>
+              </div>
+            </div>
+
+            {/* Group Pills */}
+            <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none flex-wrap sm:flex-nowrap">
+              <button
+                type="button"
+                onClick={clearGroupSelection}
+                className={`px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all border ${
+                  selectedGroupIds.length === 0
+                    ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                    : "bg-muted/40 hover:bg-muted text-muted-foreground border-border/40"
+                }`}
+              >
+                All Workers ({workers.length})
+              </button>
+              {groups.map((group) => {
+                const isSelected = selectedGroupIds.includes(group.id);
+                const memberIds = new Set(group.members.map((m) => m.id));
+                const memberWorkers = workers.filter((w) => memberIds.has(w.id));
+                const presentCount = memberWorkers.filter((w) => !!w.attendance).length;
+
+                return (
+                  <button
+                    key={group.id}
+                    type="button"
+                    onClick={() => toggleGroupSelection(group.id)}
+                    className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all flex items-center gap-1.5 border ${
+                      isSelected
+                        ? "bg-primary/20 text-primary border-primary ring-2 ring-primary/20 font-semibold shadow-sm"
+                        : `${groupChip(group.color)} hover:opacity-85`
+                    }`}
+                  >
+                    {isSelected && <span className="text-[11px] font-bold">✓</span>}
+                    <span>{group.name}</span>
+                    <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-background/50 border border-current/20">
+                      {presentCount}/{memberWorkers.length}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Presentees & Absentees Status Filter Tabs */}
+            <div className="flex items-center gap-2 pt-1 border-t border-border/30 overflow-x-auto pb-1 scrollbar-none">
+              <span className="text-xs text-muted-foreground font-medium flex items-center gap-1 shrink-0 pr-1">
+                <Filter className="w-3.5 h-3.5 text-primary" /> Status:
+              </span>
+
+              <button
+                type="button"
+                onClick={() => setStatusFilter('all')}
+                className={`px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap transition-all border ${
+                  statusFilter === 'all'
+                    ? "bg-foreground text-background border-foreground font-semibold shadow-sm"
+                    : "bg-card hover:bg-muted/60 text-muted-foreground border-border/50"
+                }`}
+              >
+                All Status ({statusCounts.total})
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setStatusFilter('present')}
+                className={`px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap transition-all flex items-center gap-1.5 border ${
+                  statusFilter === 'present'
+                    ? "bg-emerald-600 text-white border-emerald-600 font-semibold shadow-sm"
+                    : "bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border-emerald-500/30"
+                }`}
+              >
+                <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                Presentees ({statusCounts.present})
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setStatusFilter('absent')}
+                className={`px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap transition-all flex items-center gap-1.5 border ${
+                  statusFilter === 'absent'
+                    ? "bg-amber-600 text-white border-amber-600 font-semibold shadow-sm"
+                    : "bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-300 border-amber-500/30"
+                }`}
+              >
+                <span className="w-2 h-2 rounded-full bg-amber-500" />
+                Absentees / Not Checked In ({statusCounts.absent})
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setStatusFilter('completed')}
+                className={`px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap transition-all flex items-center gap-1.5 border ${
+                  statusFilter === 'completed'
+                    ? "bg-purple-600 text-white border-purple-600 font-semibold shadow-sm"
+                    : "bg-purple-500/10 hover:bg-purple-500/20 text-purple-700 dark:text-purple-300 border-purple-500/30"
+                }`}
+              >
+                <span className="w-2 h-2 rounded-full bg-purple-500" />
+                Checked Out ({statusCounts.checkedOut})
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Group & Bulk Check-In / Check-Out Action Banner */}
+        <Card className="glass-card p-4 border-primary/30 bg-primary/5 space-y-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-xs font-bold uppercase tracking-wider text-primary">
+                  Bulk Attendance Operations
+                </span>
+                {activeSelectedGroups.length > 0 ? (
+                  <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20 text-xs font-semibold">
+                    {activeSelectedGroups.map(g => g.name).join(", ")}
+                  </Badge>
+                ) : (
+                  <Badge variant="outline" className="text-xs">All Groups Scope</Badge>
+                )}
+                <span className="text-xs text-muted-foreground">
+                  ({statusCounts.total} Workers in Scope)
+                </span>
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Status: <strong className="text-emerald-600 dark:text-emerald-400">{statusCounts.present} Present</strong> • <strong className="text-amber-600 dark:text-amber-400">{statusCounts.absent} Absentees</strong> • {statusCounts.checkedOut} Completed Shift
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2 flex-wrap">
+              {/* Bulk Check-In for Absentees */}
+              <div className="flex items-center gap-1.5 bg-background/85 p-1.5 rounded-xl border border-border/50 shadow-sm">
+                <span className="text-[11px] font-medium text-muted-foreground pl-1">In:</span>
+                <Input
+                  type="time"
+                  value={groupBulkInTime}
+                  onChange={(e) => setGroupBulkInTime(e.target.value)}
+                  className="h-8 w-24 text-xs font-mono p-1"
+                />
+                <Button
+                  size="sm"
+                  onClick={handleBulkCheckIn}
+                  disabled={statusCounts.absent === 0 || groupProcessing}
+                  className="h-8 text-xs gap-1.5 font-semibold bg-emerald-600 hover:bg-emerald-700 text-white"
+                >
+                  {groupProcessing ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <LogIn className="w-3.5 h-3.5" />
+                  )}
+                  Check In Absentees ({statusCounts.absent})
+                </Button>
+              </div>
+
+              {/* Bulk Check-Out for Presentees */}
+              <div className="flex items-center gap-1.5 bg-background/85 p-1.5 rounded-xl border border-border/50 shadow-sm">
+                <span className="text-[11px] font-medium text-muted-foreground pl-1">Out:</span>
+                <Input
+                  type="time"
+                  value={groupBulkOutTime}
+                  onChange={(e) => setGroupBulkOutTime(e.target.value)}
+                  className="h-8 w-24 text-xs font-mono p-1"
+                />
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={handleBulkCheckOut}
+                  disabled={statusCounts.pendingOut === 0 || groupProcessing}
+                  className="h-8 text-xs gap-1.5 font-semibold border-amber-500/40 text-amber-700 dark:text-amber-400 hover:bg-amber-500/10"
+                >
+                  {groupProcessing ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <LogOut className="w-3.5 h-3.5" />
+                  )}
+                  Check Out Presentees ({statusCounts.pendingOut})
+                </Button>
+              </div>
+            </div>
+          </div>
+        </Card>
+
         {/* Workers List */}
         <Card className="glass-card p-4">
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
             <h2 className="text-lg font-semibold flex items-center gap-2">
               <User className="w-5 h-5" />
-              All Workers ({sortedWorkers.length})
+              {statusFilter === 'present' ? 'Present Workers' : statusFilter === 'absent' ? 'Absent Workers' : statusFilter === 'completed' ? 'Checked Out Workers' : 'Workers'}
+              {activeSelectedGroups.length > 0 && ` (${activeSelectedGroups.map(g => g.name).join(', ')})`} ({sortedWorkers.length})
             </h2>
+
+            {statusFilter !== 'all' && (
+              <Badge variant="outline" className="text-xs cursor-pointer hover:bg-muted" onClick={() => setStatusFilter('all')}>
+                Showing {statusFilter} only • Click to show all
+              </Badge>
+            )}
           </div>
 
           {loading ? (

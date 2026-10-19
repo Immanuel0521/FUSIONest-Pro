@@ -291,6 +291,7 @@ export default function FullAttendanceReport({ embedded = false }: Props) {
     workingDaysCount: monthCalendarStats.workingDays,
     sundaysCount: monthCalendarStats.sundays,
     holidaysCount: monthCalendarStats.holidays,
+    companyName: activeCompany?.name,
   });
 
   const attendanceRate = (r: MatrixRow) => {

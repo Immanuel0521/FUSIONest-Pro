@@ -1,10 +1,15 @@
 import { useState, useCallback } from 'react';
+import { detectPossibleMockLocation } from '@/lib/geofence';
 
 export interface LocationData {
   latitude: number;
   longitude: number;
   accuracy: number;
   timestamp: number;
+  speed: number | null;
+  altitude: number | null;
+  /** True if the position exhibits mock-location patterns (accuracy=0, no speed) */
+  isMockLocationSuspected: boolean;
 }
 
 interface UseGeolocationResult {
@@ -34,11 +39,20 @@ export function useGeolocation(): UseGeolocationResult {
     return new Promise((resolve) => {
       navigator.geolocation.getCurrentPosition(
         (position) => {
+          const speed = position.coords.speed;
+          const isMock = detectPossibleMockLocation(
+            position.coords.accuracy,
+            speed,
+          );
+
           const locationData: LocationData = {
             latitude: position.coords.latitude,
             longitude: position.coords.longitude,
             accuracy: position.coords.accuracy,
             timestamp: position.timestamp,
+            speed: speed,
+            altitude: position.coords.altitude,
+            isMockLocationSuspected: isMock,
           };
           setLocation(locationData);
           setLoading(false);
@@ -78,3 +92,4 @@ export function useGeolocation(): UseGeolocationResult {
     isSupported,
   };
 }
+

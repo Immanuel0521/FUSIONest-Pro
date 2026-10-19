@@ -15,6 +15,7 @@ export interface DprPdfData {
   tomorrowMaterials: any[];
   siteEngineerName?: string;
   pmName?: string;
+  companyName?: string;
 }
 
 const TEAL: [number, number, number] = [15, 118, 110];
@@ -28,7 +29,7 @@ export async function generateDprPdf(d: DprPdfData): Promise<jsPDF> {
   pdf.rect(0, 0, w, 60, "F");
   pdf.setTextColor(255, 255, 255);
   pdf.setFontSize(18);
-  pdf.text("FUSIONest — Daily Progress Report", 40, 38);
+  pdf.text(`${d.companyName || "Workforce"} — Daily Progress Report`, 40, 38);
   pdf.setFontSize(9);
   pdf.text(d.dpr.dpr_number || "", w - 40, 38, { align: "right" });
   y = 80;

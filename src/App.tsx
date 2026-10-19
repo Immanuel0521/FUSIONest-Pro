@@ -43,6 +43,7 @@ import AccessSuspended from "./pages/AccessSuspended";
 import StageQualityStandards from "./pages/StageQualityStandards";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsOfService from "./pages/TermsOfService";
+import Sitemap from "./pages/Sitemap";
 
 const queryClient = new QueryClient();
 
@@ -56,6 +57,7 @@ const AnimatedRoutes = () => {
         <Route path="/" element={<PageTransition><Index /></PageTransition>} />
         <Route path="/privacy" element={<PageTransition><PrivacyPolicy /></PageTransition>} />
         <Route path="/terms" element={<PageTransition><TermsOfService /></PageTransition>} />
+        <Route path="/sitemap" element={<PageTransition><Sitemap /></PageTransition>} />
         <Route path="/attendance-scan" element={<PageTransition><PublicBiometricAttendance /></PageTransition>} />
         <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
         <Route

@@ -23,6 +23,36 @@ interface FaceEmbedding {
 // Relaxed from 0.5 to 0.6 for better real-world matching with multi-angle support
 const MATCH_THRESHOLD = 0.6;
 
+/** Configurable minimum confidence (0-100) for a match to be accepted */
+export const FACE_CONFIDENCE_THRESHOLD = Number(
+  (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_FACE_CONFIDENCE) || 75,
+);
+
+/**
+ * Analyse average luminosity of the video frame.
+ * Returns a value 0-255.  Below ~60 is too dark, above ~220 too bright.
+ */
+export function analyseFrameBrightness(video: HTMLVideoElement): number {
+  try {
+    const canvas = document.createElement('canvas');
+    const size = 64; // Downscale for speed
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return 128;
+    ctx.drawImage(video, 0, 0, size, size);
+    const { data } = ctx.getImageData(0, 0, size, size);
+    let total = 0;
+    for (let i = 0; i < data.length; i += 4) {
+      // Perceived luminosity formula
+      total += 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+    }
+    return total / (size * size);
+  } catch {
+    return 128; // Assume OK on error
+  }
+}
+
 export function useFaceRecognition() {
   const [modelsLoaded, setModelsLoaded] = useState(false);
   const [loading, setLoading] = useState(false);

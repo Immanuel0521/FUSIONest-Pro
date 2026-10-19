@@ -65,7 +65,12 @@ export default function PrivacyPolicy() {
             <ul className="list-disc pl-5 space-y-1 text-muted-foreground">
               <li><strong>Account Credentials:</strong> Full name, professional email address, phone number, and password hashes for authentication.</li>
               <li><strong>Workforce Profiles:</strong> Worker names, assigned designations, site affiliations, photos, and emergency contact details.</li>
-              <li><strong>Biometric Data:</strong> Mathematical vector embeddings (face descriptor landmarks) for biometric muster check-in/out verification. Raw camera streams are processed locally in your browser session.</li>
+              <li><strong>Biometric Data &amp; Verification Snapshots:</strong>
+                <ul className="list-[circle] pl-5 mt-1 space-y-1">
+                  <li><strong>Facial Landmark Vectors:</strong> Mathematical 128-dimensional vector descriptors extracted locally within the browser session via client-side WebAssembly models without streaming continuous video to external servers.</li>
+                  <li><strong>Attendance Verification Photos:</strong> Static photographic snapshots captured at the exact moment of check-in and check-out to verify physical worker presence and prevent buddy punching.</li>
+                </ul>
+              </li>
               <li><strong>Attendance &amp; Operational Logs:</strong> Time-in, time-out timestamps, overtime records, site geolocation coordinates (captured only during check-in/out for geo-fencing verification), and site supervisor sign-offs.</li>
               <li><strong>Project Documentation:</strong> Daily Progress Reports (DPR), quality checklists, material alerts, and stage methodologies.</li>
             </ul>
@@ -83,36 +88,38 @@ export default function PrivacyPolicy() {
           </section>
 
           <section className="space-y-2">
-            <h2 className="text-lg font-bold text-foreground">3. Biometric Data Handling &amp; Consent</h2>
+            <h2 className="text-lg font-bold text-foreground">3. Biometric Data Handling, Storage &amp; Access Controls</h2>
             <p className="text-muted-foreground">
-              In accordance with applicable biometric protection provisions, facial feature extraction is conducted 
-              solely for worker identification and preventing proxy attendance. Facial biometric embeddings are stored 
-              in encrypted database tables and are accessible exclusively to authorized company administrators and supervisors. 
-              We do not share, sell, or commercialize biometric descriptors under any circumstances.
-            </p>
-          </section>
-
-          <section className="space-y-2">
-            <h2 className="text-lg font-bold text-foreground">4. Data Retention &amp; Security Measures</h2>
-            <p className="text-muted-foreground">
-              We retain attendance logs and project records for the duration of your company&apos;s active subscription or as 
-              mandated by statutory labor laws and client contractual periods. Security controls include:
+              In accordance with applicable data protection principles:
             </p>
             <ul className="list-disc pl-5 space-y-1 text-muted-foreground">
-              <li>PostgreSQL Row Level Security (RLS) enforcing company-level partition isolation.</li>
-              <li>Role-based access control (Admin, Management, Supervisor, Worker).</li>
-              <li>No unencrypted API data storage inside service worker browser caches.</li>
-              <li>Strict session token expiration and cryptographic JWT verification.</li>
+              <li><strong>Local Processing:</strong> Face landmark extraction runs in the client browser using WebAssembly. Real-time video streams are not transmitted or stored on cloud servers.</li>
+              <li><strong>Encrypted Storage:</strong> Vector embeddings are stored in protected database tables. Attendance verification snapshot photos are stored in a private, non-public storage bucket (<code>attendance-photos</code>) protected by Row Level Security and authentication guards.</li>
+              <li><strong>Access Control:</strong> Verification snapshots are accessible strictly to authorized company supervisors and management for attendance verification and muster audit. Snapshots are never publicly accessible, shared with third parties, or commercialized.</li>
             </ul>
           </section>
 
           <section className="space-y-2">
-            <h2 className="text-lg font-bold text-foreground">5. Your Statutory Rights (DPDP Act, 2023)</h2>
-            <p className="text-muted-foreground">Under the Digital Personal Data Protection Act, registered users and workforce members have:</p>
+            <h2 className="text-lg font-bold text-foreground">4. Data Retention, Cleanup Practices &amp; Deletion</h2>
+            <p className="text-muted-foreground">
+              Attendance records and project archives are retained for the duration of the subscribing company&apos;s active account or as required by statutory labor legislation:
+            </p>
             <ul className="list-disc pl-5 space-y-1 text-muted-foreground">
-              <li><strong>Right to Information:</strong> The right to review what personal data is recorded and processed.</li>
-              <li><strong>Right to Correction &amp; Erasure:</strong> The right to request correction of inaccurate worker profiles or deletion of accounts upon cessation of employment.</li>
-              <li><strong>Right of Grievance Redressal:</strong> The right to submit privacy inquiries or grievances to our data compliance team.</li>
+              <li><strong>Attendance Photo Cleanup Function:</strong> A server-side cleanup Edge Function (<code>cleanup-attendance-photos</code>) is deployed to purge approved attendance photos older than 24 hours from cloud storage and database tables.</li>
+              <li><strong>Scheduled Execution Notice:</strong> Automated periodic execution of this cleanup function requires platform cron scheduling (e.g., <code>pg_cron</code>) to be enabled by the database administrator. Where scheduled automation is not active, records persist until manually triggered or pruned by authorized personnel.</li>
+              <li><strong>Account Termination:</strong> Upon termination of service or upon verified data erasure request, company data is archived or deleted in accordance with contractual agreements and legal retention mandates.</li>
+            </ul>
+          </section>
+
+          <section className="space-y-2">
+            <h2 className="text-lg font-bold text-foreground">5. Statutory Consent &amp; Employer Responsibilities (DPDP Act, 2023)</h2>
+            <p className="text-muted-foreground">
+              Under the Digital Personal Data Protection Act, 2023 (DPDP Act, India), employers and contractor organizations act as Data Fiduciaries:
+            </p>
+            <ul className="list-disc pl-5 space-y-1 text-muted-foreground">
+              <li><strong>Employer Consent Obligation:</strong> Organizations using FUSIONest Pro are responsible for obtaining prior, explicit, and informed consent from workers before enrolling their facial biometric embeddings or capturing on-duty attendance photos.</li>
+              <li><strong>Notice:</strong> Workers must be informed of the purpose, retention period, and security safeguards applied to their biometric descriptors and attendance logs.</li>
+              <li><strong>Right to Correction &amp; Erasure:</strong> Workers retain statutory rights to request correction of inaccurate records and erasure of personal data upon cessation of employment, subject to applicable statutory labor records obligations.</li>
             </ul>
           </section>
 

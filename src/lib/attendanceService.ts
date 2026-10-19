@@ -24,6 +24,10 @@ export interface CheckInParams {
   faceConfidence?: number;
   groupId?: string;
   siteId?: string;
+  geofenceVerdict?: string;
+  geofenceDistance?: number;
+  livenessVerified?: boolean;
+  mockLocationFlag?: boolean;
 }
 
 export interface CheckOutParams {
@@ -34,6 +38,10 @@ export interface CheckOutParams {
   locationOut?: { lat: number; lng: number; accuracy: number };
   faceVerified?: boolean;
   faceConfidence?: number;
+  geofenceVerdict?: string;
+  geofenceDistance?: number;
+  livenessVerified?: boolean;
+  mockLocationFlag?: boolean;
 }
 
 export interface AttendanceResult {
@@ -56,7 +64,11 @@ export async function unifiedCheckIn(params: CheckInParams): Promise<AttendanceR
     faceVerified, 
     faceConfidence,
     groupId,
-    siteId 
+    siteId,
+    geofenceVerdict,
+    geofenceDistance,
+    livenessVerified,
+    mockLocationFlag,
   } = params;
 
   const timeIn = customTimeIn || new Date();
@@ -117,6 +129,10 @@ export async function unifiedCheckIn(params: CheckInParams): Promise<AttendanceR
   if (locationIn) insertData.location_in = locationIn;
   if (faceVerified) insertData.face_verified_in = true;
   if (faceConfidence) insertData.face_confidence_in = faceConfidence;
+  if (geofenceVerdict) insertData.geofence_verdict_in = geofenceVerdict;
+  if (geofenceDistance != null) insertData.geofence_distance_in = geofenceDistance;
+  if (livenessVerified) insertData.liveness_verified_in = true;
+  if (mockLocationFlag) insertData.mock_location_flag = true;
 
   const { data, error } = await (supabase
     .from('attendance_logs') as any)
@@ -200,6 +216,10 @@ export async function unifiedCheckOut(params: CheckOutParams): Promise<Attendanc
   if (locationOut) updateData.location_out = locationOut;
   if (faceVerified) updateData.face_verified_out = true;
   if (faceConfidence) updateData.face_confidence_out = faceConfidence;
+  if (params.geofenceVerdict) updateData.geofence_verdict_out = params.geofenceVerdict;
+  if (params.geofenceDistance != null) updateData.geofence_distance_out = params.geofenceDistance;
+  if (params.livenessVerified) updateData.liveness_verified_out = true;
+  if (params.mockLocationFlag) updateData.mock_location_flag = true;
 
   const { error } = await (supabase
     .from('attendance_logs') as any)

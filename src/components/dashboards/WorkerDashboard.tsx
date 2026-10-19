@@ -133,7 +133,7 @@ export default function WorkerDashboard() {
                 Welcome back, {profile?.full_name || "Worker"}
               </h1>
               <p className="text-sm text-muted-foreground mt-1">
-                Workspace: <span className="font-semibold text-foreground">{activeCompany?.name || "FUSIONest Pro"}</span>
+                Workspace: <span className="font-semibold text-foreground">{activeCompany?.name || "Company Workspace"}</span>
               </p>
             </div>
 
