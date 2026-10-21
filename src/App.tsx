@@ -9,6 +9,9 @@ import { OfflineIndicator } from "@/components/OfflineIndicator";
 import { PageTransition } from "@/components/PageTransition";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { CompanyProvider } from "@/context/CompanyContext";
+import { isSupabaseConfigured } from "@/integrations/supabase/client";
+import { ConfigRequired } from "@/components/ConfigRequired";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 import Index from "./pages/Index";
 import Onboarding from "./pages/Onboarding";
@@ -213,21 +216,29 @@ const AnimatedRoutes = () => {
   );
 };
 
-const App = () => (
-  <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
-    <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <OfflineIndicator />
-        <BrowserRouter>
-          <CompanyProvider>
-            <AnimatedRoutes />
-          </CompanyProvider>
-        </BrowserRouter>
-      </TooltipProvider>
-    </QueryClientProvider>
-  </ThemeProvider>
-);
+const App = () => {
+  if (!isSupabaseConfigured) {
+    return <ConfigRequired />;
+  }
+
+  return (
+    <ErrorBoundary>
+      <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
+        <QueryClientProvider client={queryClient}>
+          <TooltipProvider>
+            <Toaster />
+            <Sonner />
+            <OfflineIndicator />
+            <BrowserRouter>
+              <CompanyProvider>
+                <AnimatedRoutes />
+              </CompanyProvider>
+            </BrowserRouter>
+          </TooltipProvider>
+        </QueryClientProvider>
+      </ThemeProvider>
+    </ErrorBoundary>
+  );
+};
 
 export default App;

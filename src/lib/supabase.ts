@@ -1,3 +1,3 @@
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, isSupabaseConfigured } from "@/integrations/supabase/client";
 
-export { supabase };
+export { supabase, isSupabaseConfigured };
