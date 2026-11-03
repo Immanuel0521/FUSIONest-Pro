@@ -65,8 +65,10 @@ export const Navbar = () => {
   useEffect(() => {
     loadProfile();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
-      loadProfile();
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === "SIGNED_IN" || event === "USER_UPDATED") {
+        loadProfile();
+      }
     });
 
     return () => subscription.unsubscribe();

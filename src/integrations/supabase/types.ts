@@ -2841,7 +2841,7 @@ export type Database = {
         | "returned"
       material_alert_status: "open" | "procuring" | "fulfilled" | "closed"
       project_checklist_status: "not_started" | "in_progress" | "completed"
-      project_status: "active" | "completed" | "on_hold" | "not_started"
+      project_status: "active" | "completed" | "on_hold" | "not_started" | "cancelled"
       supervisor_role:
         | "admin"
         | "supervisor"
@@ -3022,7 +3022,7 @@ export const Constants = {
       ],
       material_alert_status: ["open", "procuring", "fulfilled", "closed"],
       project_checklist_status: ["not_started", "in_progress", "completed"],
-      project_status: ["active", "completed", "on_hold", "not_started"],
+      project_status: ["active", "completed", "on_hold", "not_started", "cancelled"],
       supervisor_role: [
         "admin",
         "supervisor",

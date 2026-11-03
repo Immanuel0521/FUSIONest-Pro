@@ -95,7 +95,7 @@ export const ProjectList = () => {
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {filtered.map((p, i) => {
             const dr = daysRemaining(p.expected_end_date);
-            const overdue = dr != null && dr < 0 && p.status !== "completed";
+            const overdue = dr != null && dr < 0 && p.status !== "completed" && p.status !== "cancelled";
             return (
               <motion.div key={p.id} initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04 }}>
                 <Card className="glass-card rounded-2xl p-5 hover-lift h-full flex flex-col">

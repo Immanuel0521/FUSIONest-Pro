@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/lib/supabase";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -59,9 +59,13 @@ export function CompanyProvider({ children }: { children: React.ReactNode }) {
   const [memberships, setMemberships] = useState<CompanyMembership[]>([]);
   const [activeCompanyId, setActiveCompanyId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const hasLoadedRef = useRef(false);
 
-  const loadCompanies = useCallback(async () => {
-    setLoading(true);
+  const loadCompanies = useCallback(async (silent = false) => {
+    // Only show full-screen loading on the initial cold load
+    if (!silent && !hasLoadedRef.current) {
+      setLoading(true);
+    }
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const user = session?.user;
@@ -69,6 +73,7 @@ export function CompanyProvider({ children }: { children: React.ReactNode }) {
         setMemberships([]);
         setActiveCompanyId(null);
         setLoading(false);
+        hasLoadedRef.current = true;
         return;
       }
 
@@ -82,6 +87,7 @@ export function CompanyProvider({ children }: { children: React.ReactNode }) {
       if (error) {
         console.error("[CompanyContext] load memberships:", error.message);
         setLoading(false);
+        hasLoadedRef.current = true;
         return;
       }
 
@@ -101,7 +107,7 @@ export function CompanyProvider({ children }: { children: React.ReactNode }) {
       if (preferred && ids.includes(preferred)) {
         setActiveCompanyId(preferred);
       } else if (ids.length > 0) {
-        setActiveCompanyId(ids[0]);
+        setActiveCompanyId((current) => (current && ids.includes(current) ? current : ids[0]));
       } else {
         setActiveCompanyId(null);
       }
@@ -109,6 +115,7 @@ export function CompanyProvider({ children }: { children: React.ReactNode }) {
       console.error("[CompanyContext] unexpected error:", err);
     } finally {
       setLoading(false);
+      hasLoadedRef.current = true;
     }
   }, []);
 
@@ -116,13 +123,15 @@ export function CompanyProvider({ children }: { children: React.ReactNode }) {
     loadCompanies();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === "SIGNED_IN" || event === "USER_UPDATED" || event === "TOKEN_REFRESHED") {
-        loadCompanies();
+      // Ignore TOKEN_REFRESHED: only reload on explicit sign in or user update, silently
+      if (event === "SIGNED_IN" || event === "USER_UPDATED") {
+        loadCompanies(true);
       }
       if (event === "SIGNED_OUT") {
         setMemberships([]);
         setActiveCompanyId(null);
         setLoading(false);
+        hasLoadedRef.current = false;
       }
     });
 

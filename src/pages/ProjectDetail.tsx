@@ -55,7 +55,7 @@ export default function ProjectDetail() {
   }
 
   const dr = daysRemaining(project.expected_end_date);
-  const overdue = dr != null && dr < 0 && project.status !== "completed";
+  const overdue = dr != null && dr < 0 && project.status !== "completed" && project.status !== "cancelled";
 
   return (
     <DashboardLayout>

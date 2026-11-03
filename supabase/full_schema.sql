@@ -1,4 +1,4 @@
-﻿-- ========== 20251023131108_6a98a521-bc19-46ae-ac73-f1bf63f89e3e.sql ==========
+-- ========== 20251023131108_6a98a521-bc19-46ae-ac73-f1bf63f89e3e.sql ==========
 -- Create enum for blood groups
 CREATE TYPE blood_group AS ENUM ('A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-');
 
@@ -1421,6 +1421,9 @@ DO $$
 BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_enum WHERE enumlabel = 'not_started' AND enumtypid = 'public.project_status'::regtype) THEN
     ALTER TYPE public.project_status ADD VALUE 'not_started';
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_enum WHERE enumlabel = 'cancelled' AND enumtypid = 'public.project_status'::regtype) THEN
+    ALTER TYPE public.project_status ADD VALUE 'cancelled';
   END IF;
 END$$;
 

@@ -31,9 +31,11 @@ export const ProtectedRoute = ({
       setAuthLoading(false);
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setIsAuthenticated(!!session);
-      setAuthLoading(false);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "SIGNED_IN" || event === "SIGNED_OUT" || event === "USER_UPDATED") {
+        setIsAuthenticated(!!session);
+        setAuthLoading(false);
+      }
     });
 
     return () => subscription.unsubscribe();
